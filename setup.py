@@ -18,6 +18,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     package_dir={"ContextEditor": "ContextEditor", "converters": "converters", "duration": "duration", "tasks": "tasks"},
-    packages=setuptools.find_packages(where="."),
+    packages=["ContextEditor", "converters", "duration", "tasks"].
     python_requires=">=3.6",
 )
