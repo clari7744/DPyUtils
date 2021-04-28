@@ -17,7 +17,12 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"ContextEditor": "ContextEditor", "converters": "converters", "duration": "duration", "tasks": "tasks"},
-    packages=["ContextEditor", "converters", "duration", "tasks"].
+    package_dir={
+        "ContextEditor": "ContextEditor",
+        "converters": "converters",
+        "duration": "duration",
+        "tasks": "tasks",
+    },
+    packages=["ContextEditor", "converters", "duration", "tasks"],
     python_requires=">=3.6",
 )

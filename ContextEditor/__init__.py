@@ -11,5 +11,6 @@ A standalone context editor system. This allows the user to edit their message, 
 
 from context import *
 
+
 def setup(bot: commands.Bot):
     Editor(bot)

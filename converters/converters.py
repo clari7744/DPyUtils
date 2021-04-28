@@ -122,6 +122,7 @@ class CategoryChannel(CategoryChannelConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.CategoryChannelConverter
     """
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.get_all_categories = self.get_all_categories
@@ -157,10 +158,11 @@ class TextChannel(TextChannelConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.TextChannelConverter
     """
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.get_all_text_channels = self.get_all_text_channels
-        
+
     def get_all_text_channels(self):
         for guild in self.guilds:
             for channel in guild.text_channels:
@@ -192,10 +194,11 @@ class VoiceChannel(VoiceChannelConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.VoiceChannelConverter
     """
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.get_all_voice_channels = self.get_all_voice_channels
-        
+
     def get_all_voice_channels(self):
         for guild in self.guilds:
             for channel in guild.voice_channels:
@@ -227,6 +230,7 @@ class StageChannel(StageChannelConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.StageChannelConverter
     """
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.get_all_stage_channels = self.get_all_stage_channels
@@ -235,7 +239,7 @@ class StageChannel(StageChannelConverter):
         for guild in self.guilds:
             for channel in guild.stage_channels:
                 yield channel
- 
+
     async def convert(self, ctx, argument):
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
