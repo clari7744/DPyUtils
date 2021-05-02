@@ -1,26 +1,17 @@
-import setuptools
+from setuptools import setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="dpy-utils",
     version="0.0.1",
     author="Clari",
     author_email="clarinet.puppy@gmail.com",
+    url="https://github.com/Clari-7744/dpy-utils",
+    license="MIT",
     description="Some discord.py utils by Clari",
     long_description=long_description,
     url="https://github.com/Clari-7744/dpy-utils",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    package_dir={
-        "ContextEditor": "ContextEditor",
-        "converters": "converters",
-        "duration": "duration",
-        "tasks": "tasks",
-    },
-    packages=["ContextEditor", "converters", "duration", "tasks"],
+    packages=["context", "converters", "duration", "tasks"],
 )
