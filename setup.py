@@ -12,6 +12,5 @@ setup(
     license="MIT",
     description="Some discord.py utils by Clari",
     long_description=long_description,
-    url="https://github.com/Clari-7744/dpy-utils",
     packages=["context", "converters", "duration", "tasks"],
 )
