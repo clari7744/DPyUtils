@@ -1,7 +1,6 @@
-import discord, typing, DiscordUtils, asyncio, utils, postbin
+import discord, typing, DiscordUtils, asyncio
 from discord.ext import commands
 from DiscordUtils.Pagination import *
-from utils.converters import *
 
 
 class Tasks(commands.Cog):
@@ -37,7 +36,7 @@ class Tasks(commands.Cog):
         self,
         ctx: commands.Context,
         number: typing.Union[int, None],
-        user: typing.Optional[Member],
+        user: typing.Union[discord.Member, None],
         ids: bool = False,
     ):
         """
@@ -138,7 +137,9 @@ class Tasks(commands.Cog):
 
     @task.command(name="channel", aliases=["chan"])
     @commands.has_permissions(manage_messages=True)
-    async def task_channel(self, ctx: commands.Context, channel):
+    async def task_channel(
+        self, ctx: commands.Context, channel: typing.Union[discord.TextChannel, str]
+    ):
         """
         Sets the tasks channel.
         """
@@ -146,11 +147,12 @@ class Tasks(commands.Cog):
         if channel == "remove":
             data["channel"] = 0
             await ctx.send("Removed the tasks channel!")
+        elif isinstance(channel, discord.TextChannel):
+            data["channel"] = channel.id
+            await ctx.send(f"Set the tasks channel to {channel.mention}!")
         else:
-            channel = await TextChannel().convert(ctx, channel)
-        data["channel"] = channel.id
-        await ctx.send(f"Set the tasks channel to {channel.mention}!")
-        if ctx.me.permissions_in(channel).manage_channels:
+            raise commands.BadArgument(f'Channel "{channel}" not found.')
+        if dict(ctx.me.permissions_in(channel))["manage_channels"]:
             await channel.edit(
                 topic=f"Don't send or delete messages in this channel!\nThis channel is for keeping track of tasks, and is managed by {ctx.me.mention}."
             )
@@ -176,7 +178,7 @@ class Tasks(commands.Cog):
     @task.command(name="add", aliases=["create", "new", "+"])
     @commands.has_permissions(manage_messages=True)
     async def task_add(
-        self, ctx: commands.Context, assign: typing.Optional[discord.Member], *, task
+        self, ctx: commands.Context, assign: typing.Union[discord.Member, None], *, task
     ):
         """
         Adds a new task to the list.
@@ -203,7 +205,9 @@ class Tasks(commands.Cog):
 
     @task.command(name="assign")
     @commands.has_permissions(manage_messages=True)
-    async def task_assign(self, ctx: commands.Context, task: int, *users: Member):
+    async def task_assign(
+        self, ctx: commands.Context, task: int, *users: discord.Member
+    ):
         """
         Assigns a task to a user.
         """
@@ -256,7 +260,9 @@ class Tasks(commands.Cog):
 
     @task.command(name="author")
     @commands.has_permissions(manage_messages=True)
-    async def task_author(self, ctx: commands.Context, task: int, author: Member):
+    async def task_author(
+        self, ctx: commands.Context, task: int, author: discord.Member
+    ):
         """
         Sets another member as the author of a task, giving them full control over said task.
         """
@@ -371,37 +377,33 @@ class Tasks(commands.Cog):
             c: discord.TextChannel = self.bot.get_channel(data["channel"])
         except:
             return await ctx.send(f"No valid task channel set!")
-        tasks = list(set(tasks))
-        success = []
-        fail = []
-        notauthor = []
         for task in sorted(tasks, reverse=True):
             i = int(task) - 1
             try:
                 t = data["tasks"][i]
             except:
-                fail.append(f"`{task}`")
+                await ctx.send(f"There is no task with the number `{task}`!")
                 continue
             allowed: list = [642416218967375882, t["author"]]
-            allowed.extend(t["assign"])
+            for u in t["assign"]:
+                allowed.append(u)
             if ctx.author.id in allowed:
                 data["tasks"].remove(t)
                 m = data["messages"][i]
                 data["messages"].remove(m)
-                success.append(f"`{t['task']}` (`{task}`)")
+                await ctx.send(f"Removed `{t['task']}` from the list!", no_edit=True)
                 try:
                     await (await c.fetch_message(m)).delete()
                 except:
-                    pass
-            #                        f"Looks like the message tied to this task was deleted! No worries, the database is correct and your task has been removed, but make sure task messages aren't deleted in the future!",
+                    await ctx.send(
+                        f"Looks like the message tied to this task was deleted! No worries, the database is correct and your task has been removed, but make sure task messages aren't deleted in the future!",
+                        no_edit=True,
+                    )
             else:
-                notauth.append(f"`{t['task']}` (`{task}`)")
-        #                    f"`{t['task']}` is not written by or assigned to you so you can't remove it!",
-        n = "\n"
-        summary = f"{(f'**Tasks Deleted:** '+', '.join(success)) if success else ''}{(f'{n}**Not Found:** '+', '.join(fail)) if fail else ''}{(f'{n}**Not Author/Assigned:** '+', '.join(notauth)) if notauth else ''}"
-        if len(summary) > 2000:
-            summary = f"The summary of deleted tasks was too long, find it at {await postbin.postAsync(summary)}"
-        await ctx.send(summary)
+                await ctx.send(
+                    f"`{t['task']}` is not written by or assigned to you so you can't remove it!",
+                    no_edit=True,
+                )
         await self.writeDB(ctx, data)
         await self.task_fix(ctx, start=sorted(tasks)[0])
 
@@ -562,7 +564,10 @@ class Tasks(commands.Cog):
             )
         except:
             return await ctx.send(f"Timeout, cancelled task wipe", delete_after=3)
-        await ctx.send(f"There's no going back now... Wiping tasks!")
+        try:
+            await check.edit(content=f"There's no going back now... Wiping tasks!")
+        except:
+            await ctx.send(f"There's no going back now... Wiping tasks!")
         data = await self.readDB(ctx)
         data["messages"] = []
         data["tasks"] = []
