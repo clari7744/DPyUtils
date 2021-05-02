@@ -12,5 +12,5 @@ setup(
     license="MIT",
     description="Some discord.py utils by Clari",
     long_description=long_description,
-    packages=["context", "converters", "duration", "tasks"],
+    packages=["ContextEditor", "converters", "duration", "tasks"],
 )
