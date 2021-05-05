@@ -1,7 +1,7 @@
 import discord, typing, DiscordUtils, asyncio, utils, postbin
 from discord.ext import commands
 from DiscordUtils.Pagination import *
-from utils.converters import *
+from converters import *
 
 
 class Tasks(commands.Cog):
@@ -374,7 +374,7 @@ class Tasks(commands.Cog):
         tasks = list(set(tasks))
         success = []
         fail = []
-        notauthor = []
+        notauth = []
         for task in sorted(tasks, reverse=True):
             i = int(task) - 1
             try:
