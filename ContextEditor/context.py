@@ -8,15 +8,34 @@ class Context(commands.Context):
         self.msg_cache = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
 
-    @discord.utils.cached_property
-    def replied_reference(self):
-        return (
-            self.message.reference.resolved.to_reference()
-            if self.message.reference
-            else None
-        )
-
     async def send(self, content: str = None, **kwargs):
+        """
+        |coro|
+
+        Inherits from commands.Context.send. See the documentation for that function for normal arguments.
+
+        Creates a message cache that saves responses to be edited in subsequent commands.
+
+        Parameters
+        ------------
+        no_save :class:`bool`
+            Indicates whether to override this function and go straight to commands.Context.send without editing or saving message ID. Defaults to `False`.
+        no_edit :class:`bool`
+            Indicates whether to edit the previously sent message if editing a message or not. If this is set to `True`, the ID of the new message will still be saved. Defaults to `False`.
+        clear_invoke_react :class:`bool`
+            Indicates whether to clear reactions from the invoking message. Defaults to `True`.
+        clear_response_react :class:`bool`
+            Indicates whether to clear reactions from the response message. Defaults to `True`.
+
+        Raises
+        -------
+        See commands.Context.send
+
+        Returns
+        --------
+        :class:`~discord.Message`
+            The message that was sent or edited.
+        """
         no_save = kwargs.pop("no_save", False)
         no_edit = kwargs.pop("no_edit", False)
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
@@ -32,17 +51,19 @@ class Context(commands.Context):
                 await self.message.clear_reactions()
             ref = kwargs.pop("reference", None)
             if no_edit:
-                self.msg_cache.pop(self.message.id)
+                self.msg_cache.pop(self.message.id, None)
                 return await self.send(content, **kwargs)
             try:
-                await self.msg_cache[self.message.id].edit(content=content, **kwargs)
+                await self.msg_cache.get(self.message.id).edit(
+                    content=content, **kwargs
+                )
                 if (
                     clear_response_react
                     and self.me.permissions_in(self.channel).manage_messages
                 ):
                     await self.msg_cache[self.message.id].clear_reactions()
             except:
-                self.msg_cache.pop(self.message.id)
+                self.msg_cache.pop(self.message.id, None)
                 return await self.send(content, reference=ref, **kwargs)
             return await self.channel.fetch_message(self.msg_cache[self.message.id].id)
         else:
@@ -66,8 +87,8 @@ class ContextEditor:
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
-        bot.add_listener(self.on_raw_message_edit, "raw_message_edit")
-        bot.add_listener(self.on_raw_message_delete, "raw_message_delete")
+        bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
+        bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
 
     async def get_context(self, message: discord.Message, *, cls=Context):
         return await super(commands.Bot, self.bot).get_context(message, cls=cls)

@@ -30,6 +30,7 @@ class InvalidTimeFormat(commands.BadArgument):
 
 
 class DurationParser(commands.Converter):
+    # TODO: Create a docstring for this class
     async def convert(self, ctx, argument):
         try:
             return int(argument)
