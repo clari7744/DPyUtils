@@ -55,12 +55,12 @@ async def on_command_error(ctx, error):
     if isinstance(error, KillCommand):
         await ctx.send(str(error), no_save=True, delete_after=5)
     else:
-        await ctx.bot.original_on_command_error(ctx, error)
+        await ctx.bot.converters_original_on_command_error(ctx, error)
 
 
 async def result_handler(ctx, result, argument):
-    if not hasattr(ctx.bot, "original_on_command_error"):
-        ctx.bot.original_on_command_error = ctx.bot.on_command_error
+    if not hasattr(ctx.bot, "converters_original_on_command_error"):
+        ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
     if len(result) > 20:
         raise KillCommand(
@@ -146,7 +146,7 @@ class Member(MemberConverter):
             # not a mention...
             if guild:
                 if len(argument) > 5 and argument[-5] == "#":
-                    potential_discriminator = name[-4:]
+                    potential_discriminator = argument[-4:]
                     #                    result = utils.get(members, name=name[:-5], discriminator=potential_discriminator)
                     result = search(
                         argument[:-5],

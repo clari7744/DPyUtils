@@ -36,7 +36,7 @@ class DurationParser(commands.Converter):
         except:
             pass
         seconds = 0
-        match = re.findall("([0-9]+[ywdhms])", argument)
+        match = re.findall("([0-9]+?(\.[0-9]+)?[ywdhms])", argument)
         if not match:
             raise InvalidTimeFormat(argument)
         for item in match:

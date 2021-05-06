@@ -327,9 +327,13 @@ class Tasks(commands.Cog):
             )
         old = t["task"]
         t["task"] = new
-        await ctx.send(
-            f"Changed task `{task}`!\n**Before:** ```\n{old}```\n**After:** ```\n{new}```"
+        send = f"Changed task `{task}`!\n**Before:** ```\n{old}```\n**After:** ```\n{new}```"
+        send = (
+            send
+            if len(send) < 2000
+            else f"Changed task `{task}`!\n**Before:** ```\n{await postbin.postAsync(old)}```\n**After:** ```\n{await postbin.postAsync(new)}"
         )
+        await ctx.send(send)
         data["tasks"][int(task) - 1] = t
         await self.writeDB(ctx, data)
         await self.task_fix(ctx, start=task - 1, end=task)
@@ -398,7 +402,7 @@ class Tasks(commands.Cog):
                 notauth.append(f"`{t['task']}` (`{task}`)")
         #                    f"`{t['task']}` is not written by or assigned to you so you can't remove it!",
         n = "\n"
-        summary = f"{(f'**Tasks Deleted:** '+', '.join(success)) if success else ''}{(f'{n}**Not Found:** '+', '.join(fail)) if fail else ''}{(f'{n}**Not Author/Assigned:** '+', '.join(notauth)) if notauth else ''}"
+        summary = f"{(f'**Tasks Deleted:** '+ n.join(success)) if success else ''}{(f'{n}**Not Found:** '+', '.join(fail)) if fail else ''}{(f'{n}**Not Author/Assigned:** '+', '.join(notauth)) if notauth else ''}"
         if len(summary) > 2000:
             summary = f"The summary of deleted tasks was too long, find it at {await postbin.postAsync(summary)}"
         await ctx.send(summary)
