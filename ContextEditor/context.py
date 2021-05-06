@@ -32,17 +32,19 @@ class Context(commands.Context):
                 await self.message.clear_reactions()
             ref = kwargs.pop("reference", None)
             if no_edit:
-                self.msg_cache.pop(self.message.id)
+                self.msg_cache.pop(self.message.id, None)
                 return await self.send(content, **kwargs)
             try:
-                await self.msg_cache[self.message.id].edit(content=content, **kwargs)
+                await self.msg_cache.get(self.message.id).edit(
+                    content=content, **kwargs
+                )
                 if (
                     clear_response_react
                     and self.me.permissions_in(self.channel).manage_messages
                 ):
                     await self.msg_cache[self.message.id].clear_reactions()
             except:
-                self.msg_cache.pop(self.message.id)
+                self.msg_cache.pop(self.message.id, None)
                 return await self.send(content, reference=ref, **kwargs)
             return await self.channel.fetch_message(self.msg_cache[self.message.id].id)
         else:
@@ -66,8 +68,8 @@ class ContextEditor:
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
-        bot.add_listener(self.on_raw_message_edit, "raw_message_edit")
-        bot.add_listener(self.on_raw_message_delete, "raw_message_delete")
+        bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
+        bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
 
     async def get_context(self, message: discord.Message, *, cls=Context):
         return await super(commands.Bot, self.bot).get_context(message, cls=cls)
