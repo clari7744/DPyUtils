@@ -1,0 +1,10 @@
+discord.py
+re
+typing
+asyncio
+DiscordUtils
+postbin
+collections
+datetime
+setuptools
+inspect

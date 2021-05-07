@@ -2,6 +2,7 @@ from .converters import (
     Member,
     User,
     Role,
+    Color,
     CategoryChannel,
     TextChannel,
     NewsChannel,

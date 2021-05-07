@@ -37,12 +37,12 @@ class DurationParser(commands.Converter):
         except:
             pass
         seconds = 0
-        match = re.findall("([0-9]+?(\.[0-9]+)?[ywdhms])", argument)
+        match = re.findall("([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument)
         if not match:
             raise InvalidTimeFormat(argument)
         for item in match:
-            seconds += int(item[:-1]) * durations[item[-1]]
-        return seconds
+            seconds += float(item[:-1]) * durations[item[-1]]
+        return round(seconds)
 
 
 def parse(param: typing.Union[int, datetime.timedelta]):
