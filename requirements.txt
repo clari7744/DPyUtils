@@ -1,7 +1,18 @@
 discord.py
+<<<<<<< HEAD
+=======
+re
+>>>>>>> a0e36ad79d0e41c988ec06654667525f98b0a2f0
 typing
 asyncio
 DiscordUtils
 postbin
+<<<<<<< HEAD
 datetime
 setuptools
+=======
+collections
+datetime
+setuptools
+inspect
+>>>>>>> a0e36ad79d0e41c988ec06654667525f98b0a2f0

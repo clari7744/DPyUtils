@@ -1,9 +1,10 @@
-import discord, re, typing, asyncio
+import discord, re, typing, asyncio, inspect
 from discord.ext import commands
 from discord.ext.commands import (
     MemberConverter,
     UserConverter,
     RoleConverter,
+    ColorConverter,
     CategoryChannelConverter,
     TextChannelConverter,
     VoiceChannelConverter,
@@ -134,7 +135,7 @@ class Member(MemberConverter):
             result = search(argument, guild.members, "name", "display_name")
         return result
 
-    async def convert(self, ctx, argument: str) -> discord.Member:
+    async def convert(self, ctx: commands.Context, argument: str) -> discord.Member:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(
             r"<@!?([0-9]{15,20})>$", argument
@@ -184,7 +185,7 @@ class User(UserConverter):
     Custom converter to allow for looser searching, inherits from commands.UserConverter
     """
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context, argument):
         match = self._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
         result = None
         state = ctx._state
@@ -227,7 +228,7 @@ class Role(RoleConverter):
     Custom converter to allow for looser searching, inherits from commands.RoleConverter
     """
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context, argument):
         guild = ctx.guild
         if not guild:
             raise NoPrivateMessage()
@@ -243,6 +244,30 @@ class Role(RoleConverter):
         return await result_handler(ctx, result, argument)
 
 
+class Color(ColorConverter):
+    async def convert(self, ctx: commands.Context, argument):
+        if argument[0] == "#":
+            return self.parse_hex_number(argument[1:])
+        if argument[0:2] == "0x":
+            rest = argument[2:]
+            # Legacy backwards compatible syntax
+            if rest.startswith("#"):
+                return self.parse_hex_number(rest[1:])
+            return self.parse_hex_number(rest)
+        arg = argument.lower()
+        if arg[0:3] == "rgb":
+            return self.parse_rgb(arg)
+        arg = arg.replace(" ", "_")
+        try:
+            return self.parse_hex_number(argument)
+        except:
+            pass
+        method = getattr(discord.Colour, arg, None)
+        if arg.startswith("from_") or method is None or not inspect.ismethod(method):
+            raise BadColourArgument(arg)
+        return method()
+
+
 class CategoryChannel(CategoryChannelConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.CategoryChannelConverter
@@ -253,7 +278,7 @@ class CategoryChannel(CategoryChannelConverter):
             for channel in guild.categories:
                 yield channel
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context, argument):
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
@@ -290,7 +315,7 @@ class TextChannel(TextChannelConverter):
             for channel in guild.text_channels:
                 yield channel
 
-    async def convert(self, ctx, argument, *, news=False):
+    async def convert(self, ctx: commands.Context, argument, *, news=False):
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
@@ -342,7 +367,7 @@ class VoiceChannel(VoiceChannelConverter):
             for channel in guild.voice_channels:
                 yield channel
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context, argument):
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
@@ -379,7 +404,7 @@ class StageChannel(StageChannelConverter):
             for channel in guild.stage_channels:
                 yield channel
 
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context, argument):
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None

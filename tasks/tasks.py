@@ -1,7 +1,14 @@
-import discord, typing, DiscordUtils, asyncio, utils, postbin
+import discord, typing, asyncio, postbin, json, functools
 from discord.ext import commands
 from DiscordUtils.Pagination import *
 from converters import *
+
+
+class NoDatabaseFound(commands.CommandError):
+    def __init__(self):
+        super().__init__(
+            "Could not find a database file! This will hopefully be accounted for in a future version, however, you currently need to create a file named `data.json` or an error will be thrown."
+        )
 
 
 class Tasks(commands.Cog):
@@ -12,27 +19,64 @@ class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def readDB(self, ctx: commands.context):
-        data: dict = await self.bot.readDB()
+    async def readDB(self, ctx: commands.Context):
         try:
-            data: dict = data["tasks"][str(ctx.guild.id)]
-        except KeyError:
-            data["tasks"][str(ctx.guild.id)] = {
+            file = open("data.json", "r")
+        except:
+            raise NoDatabaseFound()
+        data: dict = (
+            await self.bot.readDB()
+            if hasattr(self.bot, "readDB")
+            else json.loads(file.read())
+        )
+        tasks = data.get("tasks", {})
+        return tasks.get(
+            str(ctx.guild.id),
+            {
                 "tasks": [],
                 "channel": 0,
-                # "permission": 0,
+                "roles": [],
                 "messages": [],
-            }
-            data: dict = data["tasks"][str(ctx.guild.id)]
-        return data
+            },
+        )
 
-    async def writeDB(self, ctx, data: dict):
-        d = await self.bot.readDB()
+    async def writeDB(self, ctx: commands.Context, data: dict):
+        try:
+            file = open("data.json", "r")
+        except:
+            raise NoDatabaseFound()
+        d: dict = (
+            await self.bot.readDB()
+            if hasattr(self.bot, "readDB")
+            else json.loads(file.read())
+        )
+        d.setdefault("tasks", {})
         d["tasks"][str(ctx.guild.id)] = data
-        await self.bot.writeDB(d)
+        if hasattr(self.bot, "writeDB"):
+            return await self.bot.writeDB(d)
+        open("data.json", "r").write(json.dumps(d, indent=4, ensure_ascii=False))
+
+    def custom_has_role_or_permission(**kwargs):
+        async def check(ctx: commands.Context):
+            perms = discord.Permissions()
+            perms.update(**kwargs)
+            if all(
+                getattr(ctx.author.permissions_in(ctx.channel), perm)
+                for perm, value in {k: v for k, v in dict(perms).items() if v}
+            ):
+                return True
+            data: dict = await ctx.bot.get_cog("Tasks").readDB(ctx)
+            roles = data.get("roles", [])
+            if any(role in [r.id for r in ctx.author.roles] for role in roles):
+                return True
+            if ctx.author.permissions_in(ctx.channel).manage_messages:
+                return True
+            raise commands.MissingAnyRole([ctx.guild.get_role(role) for role in roles])
+
+        return commands.check(check)
 
     @commands.group(name="task", aliases=["tasks"], invoke_without_command=True)
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task(
         self,
         ctx: commands.Context,
@@ -45,7 +89,7 @@ class Tasks(commands.Cog):
         """
         data: dict = await self.readDB(ctx)
         tasks = data["tasks"]
-        channel: discord.TextChannel = self.bot.get_channel(data["channel"])
+        channel: discord.TextChannel = self.bot.get_channel(data.get("channel"))
         if not isinstance(channel, discord.TextChannel):
             return await ctx.send(
                 f"No or invalid channel set, please use `{ctx.prefix}task channel <CHANNEL>` to set one before attempting to add tasks!"
@@ -110,7 +154,7 @@ class Tasks(commands.Cog):
         await epg.run(embeds)
 
     @task.command(name="search", aliases=["find"])
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_search(self, ctx: commands.Context, *query):
         """
         Searches for a task in the content. Will return a number and part of task content, or no results.
@@ -137,17 +181,16 @@ class Tasks(commands.Cog):
         await ctx.send(embed=embed)
 
     @task.command(name="channel", aliases=["chan"])
-    @commands.has_permissions(manage_messages=True)
-    async def task_channel(self, ctx: commands.Context, channel):
+    @custom_has_role_or_permission()
+    async def task_channel(self, ctx: commands.Context, channel: TextChannel = None):
         """
         Sets the tasks channel.
         """
         data: dict = await self.readDB(ctx)
-        if channel == "remove":
+        if not channel:
             data["channel"] = 0
             await ctx.send("Removed the tasks channel!")
-        else:
-            channel = await TextChannel().convert(ctx, channel)
+            return await self.writeDB(ctx, data)
         data["channel"] = channel.id
         await ctx.send(f"Set the tasks channel to {channel.mention}!")
         if ctx.me.permissions_in(channel).manage_channels:
@@ -173,8 +216,77 @@ class Tasks(commands.Cog):
     #            raise commands.BadArgument(f'Role "{role}" not found.')
     #        await self.writeDB(ctx, data)
 
+    @task.group(name="role")
+    @custom_has_role_or_permission()
+    async def task_role(self, ctx: commands.Context):
+        """
+        Shows roles currently whitelisted to use tasks commands.
+        """
+        data: dict = await self.readDB(ctx)
+        roles = data.get("roles", [])
+        embed = discord.Embed(
+            title="Task Roles",
+            description=f"{' '.join([r.mention for r in [ctx.guild.get_role(ro) for ro in roles]])}",
+            color=ctx.me.color,
+        )
+        await ctx.send(embed=embed)
+
+    @task_role.command(name="add")
+    @custom_has_role_or_permission()
+    async def task_role_add(self, ctx: commands.Context, *roles: Role):
+        """
+        Adds roles to the list of roles allowed to use tasks commmands.
+        """
+        data: dict = await self.readDB(ctx)
+        roledata = data.get("roles", [])
+        alr = []
+        for r in roles:
+            if r in roledata:
+                roledata.append(r.id)
+            else:
+                alr.append(r)
+        embed = discord.Embed(
+            title="Roles Added",
+            description=f"{' '.join([r.mention for r in roles if r not in alr]) or 'None added!'}",
+            color=ctx.me.color,
+        )
+        if alr:
+            embed.add_field(
+                name="Already Added", value=f"{' '.join([r.mention for r in alr])}"
+            )
+        await ctx.send(embed=embed)
+        data["roles"] = roledata
+        await self.writeDB(ctx, data)
+
+    @task_role.command(name="remove")
+    @custom_has_role_or_permission()
+    async def task_role_remove(self, ctx: commands.Context, *roles: Role):
+        """
+        Removes roles from the list of roles allowed to use tasks commmands.
+        """
+        data: dict = await self.readDB(ctx)
+        roledata = data.get("roles", [])
+        notin = []
+        for r in roles:
+            if r in roledata:
+                roledata.remove(r.id)
+            else:
+                notin.append(r)
+        embed = discord.Embed(
+            title="Roles Removed",
+            description=f"{' '.join([r.mention for r in roles if r not in notin])}",
+            color=ctx.me.color,
+        )
+        if notin:
+            embed.add_field(
+                name="Not Added", value=f"{' '.join([r.mention for r in notin])}"
+            )
+        await ctx.send(embed=embed)
+        data["roles"] = roledata
+        await self.writeDB(ctx, data)
+
     @task.command(name="add", aliases=["create", "new", "+"])
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_add(
         self, ctx: commands.Context, assign: typing.Optional[discord.Member], *, task
     ):
@@ -182,9 +294,8 @@ class Tasks(commands.Cog):
         Adds a new task to the list.
         """
         data: dict = await self.readDB(ctx)
-        try:
-            c: discord.TextChannel = ctx.guild.get_channel(data["channel"])
-        except:
+        c: discord.TextChannel = ctx.guild.get_channel(data.get("channel"))
+        if not isinstance(c, discord.TextChannel):
             return await ctx.send(f"No valid task channel set!")
         m = await c.send(f"New Task...")
         data["tasks"].append(
@@ -202,7 +313,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=len(data["tasks"]), end=len(data["tasks"]))
 
     @task.command(name="assign")
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_assign(self, ctx: commands.Context, task: int, *users: Member):
         """
         Assigns a task to a user.
@@ -255,7 +366,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=task, end=task + 1)
 
     @task.command(name="author")
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_author(self, ctx: commands.Context, task: int, author: Member):
         """
         Sets another member as the author of a task, giving them full control over said task.
@@ -275,7 +386,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=task, end=task + 1)
 
     @task.command(name="claim")
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_claim(self, ctx: commands.Context, *tasks: int):
         """
         Claims a task if it's not assigned to somebody else already.
@@ -307,7 +418,7 @@ class Tasks(commands.Cog):
         )
 
     @task.command(name="edit")
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_edit(self, ctx: commands.Context, task: int, *, new):
         """
         Edits a task that you authored.
@@ -339,7 +450,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=task - 1, end=task)
 
     @task.command(name="append")
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_append(self, ctx: commands.Context, task: int, *, new):
         """
         Appends given arguments to an existing task.
@@ -363,7 +474,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=task - 1, end=task)
 
     @task.command(name="remove", aliases=["delete", "rm", "-"])
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_remove(self, ctx: commands.Context, *tasks: int):
         """
         Removes a task from the list by index (you can only remove your own tasks or ones that are assigned to you).
@@ -410,7 +521,7 @@ class Tasks(commands.Cog):
         await self.task_fix(ctx, start=sorted(tasks)[0])
 
     @task.command(name="move", aliases=["mv", "prioritize"])
-    @commands.has_permissions(manage_messages=True)
+    @custom_has_role_or_permission()
     async def task_move(self, ctx: commands.Context, task: int, new_priority: int):
         """
         Moves a task, effectively changing the priority by shifting it up or down in the list.
@@ -466,7 +577,7 @@ class Tasks(commands.Cog):
             return failed
 
     @task.command(name="fix")
-    @commands.has_permissions(administrator=True)
+    @custom_has_role_or_permission(administrator=True)
     async def task_fix_cmd(self, ctx: commands.Context, start: int = 0):
         """
         Edits all messages in the tasks channel (start and downwards if start is provided), fixing the format.
@@ -479,7 +590,7 @@ class Tasks(commands.Cog):
         )
 
     @task.command(name="forcefix")
-    @commands.has_permissions(administrator=True)
+    @custom_has_role_or_permission(administrator=True)
     async def task_forcefix(self, ctx: commands.Context):
         """
         Task fix, but it wipes the channel and resets the messages just to make sure there aren't any booboos.

@@ -40,7 +40,7 @@ class Context(commands.Context):
         no_edit = kwargs.pop("no_edit", False)
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
-        kwargs["embed"] = kwargs.pop("embed", None)
+        kwargs.setdefault("embed", None)
         if no_save:
             return await super().send(content, **kwargs)
         if self.message.id in self.msg_cache:

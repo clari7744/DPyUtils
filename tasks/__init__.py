@@ -1,1 +1,1 @@
-from .tasks import setup
+from .tasks import Tasks, NoDatabaseFound, setup
