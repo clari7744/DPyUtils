@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="dpy-utils",
-    version="0.0.1",
+    version="0.0.5",
     author="Clari",
     author_email="clarinet.puppy@gmail.com",
     url="https://github.com/Clari-7744/dpy-utils",
