@@ -1,4 +1,4 @@
-import discord, asyncio
+import discord, asyncio, os
 from discord.ext import commands
 
 
@@ -7,11 +7,42 @@ class Context(commands.Context):
         super().__init__(**kwargs)
         self.msg_cache = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
+        self.del_em = self.bot.msg_del_emoji
+
+    async def reaction_delete(self, msg: discord.Message, del_em):
+        if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):
+            del_em = "🗑️"
+        if not del_em:
+            return
+        if not isinstance(del_em, discord.Emoji):
+            try:
+                del_em = int(del_em)
+                del_em = await self.bot.fetch_emoji(del_em)
+            except:
+                del_em = str(del_em)
+        try:
+            await msg.add_reaction(del_em)
+        except:
+            return
+        try:
+            r, u = await self.bot.wait_for(
+                "reaction_add",
+                check=lambda r, u: str(r.emoji) == del_em
+                and u.id == self.author.id
+                and r.message.id == msg.id,
+                timeout=120,
+            )
+        except asyncio.TimeoutError:
+            await msg.remove_reaction(del_em, self.me)
+        else:
+            try:
+                await msg.delete()
+            except:
+                pass
 
     async def send(self, content: str = None, **kwargs):
         """
-        |coro|
-
+        
         Inherits from commands.Context.send. See the documentation for that function for normal arguments.
 
         Creates a message cache that saves responses to be edited in subsequent commands.
@@ -26,6 +57,10 @@ class Context(commands.Context):
             Indicates whether to clear reactions from the invoking message. Defaults to `True`.
         clear_response_react :class:`bool`
             Indicates whether to clear reactions from the response message. Defaults to `True`.
+        del_em Union[:class:`bool`, :class:`int`, :class:`str`, :class:`Emoji`, None]
+            Defines reaction that will be added to a message, that can then be clicked on to delete message. Set to `None` to disable for that message. Uses `bot.msg_del_emoji` by default, which can be set via an environment variable (`CTX_DELETE_EMOJI=str|int|bool`) or by initializing the class with `del_em=emoji`.
+        del_em_timeout :class:`int`
+            The amount of seconds until the reaction deletion times out.
 
         Raises
         -------
@@ -40,50 +75,62 @@ class Context(commands.Context):
         no_edit = kwargs.pop("no_edit", False)
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
+        del_em = kwargs.pop("del_em", self.del_em)
         kwargs.setdefault("embed", None)
         if no_save:
-            return await super().send(content, **kwargs)
-        if self.message.id in self.msg_cache:
-            if (
-                clear_invoke_react
-                and self.me.permissions_in(self.channel).manage_messages
-            ):
-                await self.message.clear_reactions()
-            ref = kwargs.pop("reference", None)
-            if no_edit:
-                self.msg_cache.pop(self.message.id, None)
-                return await self.send(content, **kwargs)
-            try:
-                await self.msg_cache.get(self.message.id).edit(
-                    content=content, **kwargs
-                )
-                if (
-                    clear_response_react
-                    and self.me.permissions_in(self.channel).manage_messages
-                ):
-                    await self.msg_cache[self.message.id].clear_reactions()
-            except:
-                self.msg_cache.pop(self.message.id, None)
-                return await self.send(content, reference=ref, **kwargs)
-            return await self.channel.fetch_message(self.msg_cache[self.message.id].id)
-        else:
+            #            return await super().send(content, **kwargs)
+            msg: discord.Message = await super().send(content, **kwargs)
+            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
+            return msg
+        if self.message.id not in self.msg_cache:
             msg = await super().send(content, **kwargs)
             self.msg_cache[self.message.id] = msg
             if len(self.msg_cache) >= self.msg_cache_size:
                 self.bot.msg_cache = dict(
                     list(self.msg_cache.items())[1:]
                 )  # Janky way of capping the dict
+            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
             return msg
+        if clear_invoke_react and self.me.permissions_in(self.channel).manage_messages:
+            await self.message.clear_reactions()
+        ref = kwargs.pop("reference", None)
+        if no_edit:
+            self.msg_cache.pop(self.message.id, None)
+            return await self.send(content, **kwargs)
+        try:
+            await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
+            if (
+                clear_response_react
+                and self.me.permissions_in(self.channel).manage_messages
+            ):
+                await self.msg_cache[self.message.id].clear_reactions()
+        except:
+            self.msg_cache.pop(self.message.id, None)
+            return await self.send(content, **kwargs)
+        try:
+            await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
+            if (
+                clear_response_react
+                and self.me.permissions_in(self.channel).manage_messages
+            ):
+                await self.msg_cache[self.message.id].clear_reactions()
+        except:
+            self.msg_cache.pop(self.message.id, None)
+            return await self.send(content, reference=ref, **kwargs)
+        msg = await self.channel.fetch_message(self.msg_cache[self.message.id].id)
+        self.bot.loop.create_task(self.reaction_delete(msg, del_em))
+        return msg
 
     async def reply(self, content: str = None, **kwargs):
         return await self.send(content, reference=self.message, **kwargs)
 
 
 class ContextEditor:
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot, *, del_em=None):
         self.bot = bot
         bot.msg_cache = {}
         bot.msg_cache_size = 500
+        bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI", None)
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
