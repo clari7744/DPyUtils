@@ -4,7 +4,7 @@ import subprocess
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-ver = "0.0.5"
+ver = "0.0.6"
 
 try:  # shamelessly stolen from jishaku
     ccount, cerr = subprocess.Popen(
