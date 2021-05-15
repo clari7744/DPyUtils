@@ -42,7 +42,7 @@ class Context(commands.Context):
 
     async def send(self, content: str = None, **kwargs):
         """
-        
+
         Inherits from commands.Context.send. See the documentation for that function for normal arguments.
 
         Creates a message cache that saves responses to be edited in subsequent commands.
@@ -130,7 +130,11 @@ class ContextEditor:
         self.bot = bot
         bot.msg_cache = {}
         bot.msg_cache_size = 500
-        bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI", None)
+        bot.msg_del_emoji = (
+            del_em
+            or getattr(bot, "msg_del_emoji", None)
+            or os.getenv("CTX_DELETE_EMOJI", None)
+        )
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
