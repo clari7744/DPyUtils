@@ -67,8 +67,7 @@ async def result_handler(ctx, result, argument):
         raise KillCommand(
             f"Too many matches found for your search `{argument}`. Please refine your search and try again."
         )
-    matchlist = "\n".join([f"**{i+1}.** {v.mention if not isinstance(v, (discord.User, discord.Member, discord.Color, discord
-CategoryChannel)) else v} (`{v.id}`){f' (`{v.category}`)' if getattr(v, 'category', None) else ''}" for i, v in enumerate(result)])
+    matchlist = "\n".join([f"**{i+1}.** {v.mention if not isinstance(v, (discord.User, discord.Member, discord.Color, discord.CategoryChannel)) else v} (`{v.id}`){f' (`{v.category}`)' if getattr(v, 'category', None) else ''}" for i, v in enumerate(result)])
     t = (
         re.match("<class 'discord\..+?\.(.+?)'>", str(type(result[0])))
         .group(1)
