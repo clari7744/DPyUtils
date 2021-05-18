@@ -130,16 +130,22 @@ class ContextEditor:
         self.bot = bot
         bot.msg_cache = {}
         bot.msg_cache_size = 500
-        bot.msg_del_emoji = (
-            del_em
-            or getattr(bot, "msg_del_emoji", None)
-            or os.getenv("CTX_DELETE_EMOJI", None)
-        )
+        bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI", None)
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
+
+    def cog_unload(self):
+        self.bot.extra_events["on_raw_message_edit"] = [
+            l
+            for l in self.bot.extra_events.get("on_raw_message_edit", [])
+            if l.__self__.__class__
+            != getattr(
+                self.bot.extensions.get("ContextEditor", None), "ContextEditor", None
+            )
+        ]
 
     async def get_context(self, message: discord.Message, *, cls=Context):
         return await super(commands.Bot, self.bot).get_context(message, cls=cls)
