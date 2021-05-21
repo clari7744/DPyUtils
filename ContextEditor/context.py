@@ -156,6 +156,8 @@ class ContextEditor:
         ]
         self.bot.get_context = super(commands.Bot, self.bot).get_context
         self.bot.process_commands = super(commands.Bot, self.bot).process_commands
+        del self.bot.msg_cache
+        del self.bot.msg_cache_size
 
     async def get_context(self, message: discord.Message, *, cls=Context):
         return await super(commands.Bot, self.bot).get_context(message, cls=cls)
