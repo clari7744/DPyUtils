@@ -62,7 +62,7 @@ class Tasks(commands.Cog):
             perms.update(**kwargs)
             if all(
                 getattr(ctx.author.permissions_in(ctx.channel), perm)
-                for perm, value in {k: v for k, v in dict(perms).items() if v}
+                for perm, value in {k: v for k, v in dict(perms).items() if v}.items()
             ):
                 return True
             data: dict = await ctx.bot.get_cog("Tasks").readDB(ctx)
@@ -513,7 +513,7 @@ class Tasks(commands.Cog):
                 notauth.append(f"`{t['task']}` (`{task}`)")
         #                    f"`{t['task']}` is not written by or assigned to you so you can't remove it!",
         n = "\n"
-        summary = f"{(f'**Tasks Deleted:** '+ n.join(success)) if success else ''}{(f'{n}**Not Found:** '+', '.join(fail)) if fail else ''}{(f'{n}**Not Author/Assigned:** '+', '.join(notauth)) if notauth else ''}"
+        summary = f"{(f'**Tasks Deleted:** '+ n.join(reversed(success))) if success else ''}{(f'{n}**Not Found:** '+', '.join(reversed(fail))) if fail else ''}{(f'{n}**Not Author/Assigned:** '+', '.join(reversed(notauth))) if notauth else ''}"
         if len(summary) > 2000:
             summary = f"The summary of deleted tasks was too long, find it at {await postbin.postAsync(summary)}"
         await ctx.send(summary)
