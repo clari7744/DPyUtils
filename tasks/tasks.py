@@ -1,4 +1,4 @@
-import discord, typing, asyncio, postbin, json, functools
+import discord, typing, asyncio, postbin, json
 from discord.ext import commands
 from DiscordUtils.Pagination import *
 from converters import *

@@ -5,4 +5,3 @@ DiscordUtils
 postbin
 datetime
 setuptools
-python-dotenv
