@@ -7,7 +7,6 @@ class Context(commands.Context):
         super().__init__(**kwargs)
         self.msg_cache = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
-        self.del_em = self.bot.msg_del_emoji
 
     async def reaction_delete(self, msg: discord.Message, del_em):
         if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):
@@ -75,7 +74,9 @@ class Context(commands.Context):
         no_edit = kwargs.pop("no_edit", False)
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
-        del_em = kwargs.pop("del_em", self.del_em)
+        del_em = kwargs.pop(
+            "del_em", await self.bot.get_del_emoji(self.bot, self.message)
+        )
         kwargs.setdefault("embed", None)
         if no_save:
             #            return await super().send(content, **kwargs)
@@ -131,6 +132,7 @@ class ContextEditor:
         bot.msg_cache = {}
         bot.msg_cache_size = 500
         bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI", None)
+        bot.get_del_emoji = self.get_del_emoji
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
 
@@ -158,6 +160,8 @@ class ContextEditor:
         self.bot.process_commands = super(commands.Bot, self.bot).process_commands
         del self.bot.msg_cache
         del self.bot.msg_cache_size
+        del self.bot.msg_del_emoji
+        del self.bot.get_del_emoji
 
     async def get_context(self, message: discord.Message, *, cls=Context):
         return await super(commands.Bot, self.bot).get_context(message, cls=cls)
@@ -179,3 +183,16 @@ class ContextEditor:
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
         await asyncio.sleep(1)
         self.bot.msg_cache.pop(payload.message_id, None)
+
+    async def get_del_emoji(self, bot: commands.Bot, message: discord.Message):
+        """
+        |coro|
+        Returns bot.msg_del_emoji by default. Overwrite this to customize per locale.
+        Parameters
+        ----------
+        bot :class:`Bot`
+            Your bot instance
+        message :class:`Message
+            The message object that you want to use to detect locale for fetching del_emoji
+        """
+        return bot.msg_del_emoji
