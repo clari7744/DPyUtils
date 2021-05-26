@@ -2,10 +2,6 @@ import discord, asyncio, os
 from discord.ext import commands
 
 
-class CannotSend(commands.CheckFailure):
-    pass
-
-
 class Context(commands.Context):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -46,9 +42,15 @@ class Context(commands.Context):
     async def _send(self, content, **kwargs):
         perms: discord.Permissions = self.me.permissions_in(self.channel)
         if not perms.send_messages:
-            raise CannotSend("Can't Send")
+            raise commands.CheckFailure(
+                "Cannot Send",
+                f"I don't have permission to send messages in {self.channel.mention}!",
+            )
         if kwargs.get("embed", None) and not perms.embed_links:
-            raise CannotSend("Can't Embed")
+            raise commands.CheckFailure(
+                "Cannot Send",
+                f"I don't have permission to embed links in {self.channel.mention}!",
+            )
         return await super().send(content, **kwargs)
 
     async def send(self, content: str = None, **kwargs):
