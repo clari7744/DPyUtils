@@ -66,3 +66,20 @@ def parse(param: typing.Union[int, datetime.timedelta]):
         seconds=parsed["s"],
         total_seconds=ts,
     )
+
+
+def strfdur(param: typing.Union[int, datetime.timedelta]):
+    dur = param.total_seconds() if isinstance(param, datetime.timedelta) else int(param)
+    dict_times = {
+        incr: getattr(dur, incr + "s")
+        for incr in ["year", "week", "day", "hour", "minute", "second"]
+    }
+    times = [x for x in dict_times.items() if x[1]]
+    if len(times) > 2:
+        fmt = "{}, and {}".format(
+            ", ".join(f"{t[1]} {t[0]}{'s' if t[1] != 1 else ''}" for t in times[:-1]),
+            f"{times[-1][1]} {times[-1][0]}{'s' if times[-1][0] != 1 else ''}",
+        )
+    else:
+        fmt = " and ".join(f"{t[1]} {t[0]}{'s' if t[1] != 1 else ''}" for t in times)
+    yield fmt
