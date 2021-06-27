@@ -1,1 +1,1 @@
-from .duration import DurationParser, parse, ParsedDuration
+from .duration import DurationParser, ParsedDuration, parse, strfdur

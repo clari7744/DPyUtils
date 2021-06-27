@@ -1,8 +1,13 @@
 from .converters import (
     Member,
+    HumanMember,
+    BotMember,
     User,
+    HumanUser,
+    BotUser,
     Role,
     Color,
+    Emoji,
     CategoryChannel,
     TextChannel,
     NewsChannel,
@@ -10,5 +15,4 @@ from .converters import (
     StageChannel,
     AnyChannel,
     NonCategoryChannel,
-    KillCommand,
 )

@@ -1,46 +1,109 @@
-import discord, re, typing, asyncio, inspect
+import discord, re, asyncio, inspect
 from discord.ext import commands
 from discord.ext.commands import (
     MemberConverter,
     UserConverter,
     RoleConverter,
     ColorConverter,
+    EmojiConverter,
     CategoryChannelConverter,
     TextChannelConverter,
     VoiceChannelConverter,
     StageChannelConverter,
 )
-from discord.ext.commands.converter import _get_from_guilds, _utils_get
+from discord.ext.commands.converter import _utils_get
 from discord.ext.commands.errors import *
 
 
-def search(argument, iterable, *attrs: str, **kwargs):
+class MemberNotHuman(commands.BadArgument):
+    def __init__(self, argument):
+        self.argument = argument
+        super().__init__('Could not convert "{}" to a human Member.'.format(argument))
+
+
+class UserNotHuman(commands.BadArgument):
+    def __init__(self, argument):
+        self.argument = argument
+        super().__init__('Could not convert "{}" to a human User.'.format(argument))
+
+
+class MemberNotBot(commands.BadArgument):
+    def __init__(self, argument):
+        self.argument = argument
+        super().__init__('Could not convert "{}" to a bot Member.'.format(argument))
+
+
+class UserNotBot(commands.BadArgument):
+    def __init__(self, argument):
+        self.argument = argument
+        super().__init__('Could not convert "{}" to a bot User.'.format(argument))
+
+
+def _get_from_guilds(bot, getter, argument):
+    result = None
+    for guild in bot.guilds:
+        result = getattr(guild, getter)(argument)
+        if result:
+            return result
+    return result
+
+
+def search(argument, iterable, *attrs: str, mem_type="EITHER", **kwargs):
+    discrim = kwargs.pop("discrim", None)
+    discrim = kwargs.pop("discriminator", discrim)
+    iterable = tuple(iterable)
     if len(iterable) < 1:
         raise Exception("Iterable is empty.")
     result = None
-    discrim = kwargs.pop("discriminator", None)
     checks = [
-        lambda x: any([x.__getattribute__(attr) == argument for attr in attrs]),
-        lambda x: any(
-            [x.__getattribute__(attr).startswith(argument) for attr in attrs]
-        ),
+        lambda x: any([getattr(x, attr, None) == argument for attr in attrs]),
+        lambda x: any([getattr(x, attr, None).startswith(argument) for attr in attrs]),
         lambda x: any(
             [
-                x.__getattribute__(attr).lower().startswith(argument.lower())
+                getattr(x, attr, None).lower().startswith(argument.lower())
                 for attr in attrs
             ]
         ),
-        lambda x: any([argument in x.__getattribute__(attr) for attr in attrs]),
+        lambda x: any([argument in getattr(x, attr, None) for attr in attrs]),
         lambda x: any(
-            [argument.lower() in x.__getattribute__(attr).lower() for attr in attrs]
+            [argument.lower() in getattr(x, attr, None).lower() for attr in attrs]
         ),
     ]
     for check in checks:
         if result:
             break
         result = [x for x in iterable if check(x)]
-    if isinstance(iterable[0], (discord.Member, discord.User)) and discrim and result:
-        result = [x for x in result if x.discriminator == discrim] or None
+        if (
+            isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser))
+            and discrim
+            and result
+        ):
+            result = [x for x in result if x.discriminator == discrim] or []
+        if (
+            isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser))
+            and result
+            and mem_type != "EITHER"
+        ):
+            if mem_type == "BOT":
+                result = [x for x in result if x.bot]
+                if not result:
+                    raise (
+                        MemberNotBot(argument)
+                        if isinstance(iterable[0], discord.Member)
+                        else UserNotBot(argument)
+                    )
+            elif mem_type == "HUMAN":
+                result = [x for x in result if not x.bot]
+                if not result:
+                    raise (
+                        MemberNotHuman(argument)
+                        if isinstance(iterable[0], discord.Member)
+                        else UserNotHuman(argument)
+                    )
+            else:
+                raise commands.ArgumentParsingError(
+                    "Oh no! Something's gone wrong with the converter! Please DM 💜Clari#7744 (642416218967375882) the context of what caused this to break."
+                )
     if len(result) < 1:
         return None
     if len(result) == 1:
@@ -63,6 +126,12 @@ async def result_handler(ctx, result, argument):
     if not hasattr(ctx.bot, "converters_original_on_command_error"):
         ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
+    if len(result) == 1:
+        return result[0]
+    if len(result) < 1:
+        raise commands.BadArgument(
+            "Your argument was invalid and somehow made it all the way to the multiple-result handler, please DM 💜Clari#7744 (642416218967375882) and provide the context that caused this to happen."
+        )
     if len(result) > 20:
         raise KillCommand(
             f"Too many matches found for your search `{argument}`. Please refine your search and try again."
@@ -117,12 +186,26 @@ async def result_handler(ctx, result, argument):
     return result
 
 
+# async def check_bot(argument, result, #error, mem_type="EITHER"):
+#    if mem_type == "EITHER":
+#        return result
+#    if getattr(result, "bot", False) and mem_type == "BOT":
+#        raise (MemberNotBot(argument) if error == "Member" else UserNotBot(argument))
+#    if getattr(result, "bot", True) and mem_type == "HUMAN":
+#        raise (
+#            MemberNotHuman(argument) if error == "Member" else UserNotHuman(argument)
+#        )
+#    return result
+
+
 class Member(MemberConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.MemberConverter
     """
 
-    async def query_member_named(self, guild, argument):
+    async def query_member_named(
+        self, guild: discord.Guild, argument, mem_type="EITHER"
+    ):
         if not guild.chunked:
             await guild.chunk()
         result = None
@@ -133,14 +216,19 @@ class Member(MemberConverter):
                 guild.members,
                 "name",
                 "display_name",
-                discriminator=discriminator,
+                discrim=discriminator,
+                mem_type=mem_type,
             )
         else:
             #            members = await guild.query_members(argument, limit=100, cache=cache)
-            result = search(argument, guild.members, "name", "display_name")
+            result = search(
+                argument, guild.members, "name", "display_name", mem_type=mem_type
+            )
         return result
 
-    async def convert(self, ctx: commands.Context, argument: str) -> discord.Member:
+    async def convert(
+        self, ctx: commands.Context, argument: str, *, mem_type="EITHER"
+    ) -> discord.Member:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(
             r"<@!?([0-9]{15,20})>$", argument
@@ -153,13 +241,13 @@ class Member(MemberConverter):
             if guild:
                 if len(argument) > 5 and argument[-5] == "#":
                     potential_discriminator = argument[-4:]
-                    #                    result = utils.get(members, name=name[:-5], discriminator=potential_discriminator)
                     result = search(
                         argument[:-5],
                         guild.members,
                         "name",
                         "display_name",
-                        discriminator=potential_discriminator,
+                        discrim=potential_discriminator,
+                        mem_type=mem_type,
                     )
             else:
                 result = _get_from_guilds(bot, "get_member_named", argument)
@@ -185,12 +273,24 @@ class Member(MemberConverter):
         return await result_handler(ctx, result, argument)
 
 
+class BotMember(Member):
+    async def convert(self, ctx: commands.Context, argument):
+        return await super().convert(ctx, argument, mem_type="BOT")
+
+
+class HumanMember(Member):
+    async def convert(self, ctx: commands.Context, argument):
+        return await super().convert(ctx, argument, mem_type="HUMAN")
+
+
 class User(UserConverter):
     """
     Custom converter to allow for looser searching, inherits from commands.UserConverter
     """
 
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(
+        self, ctx: commands.Context, argument, *, mem_type="EITHER"
+    ) -> discord.User:
         match = self._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
         result = None
         state = ctx._state
@@ -216,16 +316,30 @@ class User(UserConverter):
             name = arg[:-5]
             #            predicate = lambda u: u.name == name and u.discriminator == discrim
             result = search(
-                argument, list(state._users.values()), "name", discriminator=discrim
+                argument,
+                tuple(ctx.bot.users),
+                "name",
+                discrim=discrim,
+                mem_type=mem_type,
             )
             if result is not None:
                 return result
-        result = search(argument, list(state._users.values()), "name")
+        result = search(argument, tuple(ctx.bot.users), "name", mem_type=mem_type)
         if result is None:
             raise UserNotFound(argument)
-        if isinstance(result, discord.User):
+        if isinstance(result, (discord.User, discord.ClientUser)):
             return result
         return await result_handler(ctx, result, argument)
+
+
+class BotUser(User):
+    async def convert(self, ctx: commands.Context, argument):
+        return await super().convert(ctx, argument, mem_type="BOT")
+
+
+class HumanUser(User):
+    async def convert(self, ctx: commands.Context, argument):
+        return await super().convert(ctx, argument, mem_type="HUMAN")
 
 
 class Role(RoleConverter):
@@ -241,7 +355,7 @@ class Role(RoleConverter):
         if match:
             result = guild.get_role(int(match.group(1)))
         else:
-            result = search(argument, list(guild._roles.values()), "name")
+            result = search(argument, tuple(guild.roles), "name")
         if result is None:
             raise RoleNotFound(argument)
         if isinstance(result, discord.Role):
@@ -251,6 +365,11 @@ class Role(RoleConverter):
 
 class Color(ColorConverter):
     async def convert(self, ctx: commands.Context, argument):
+        try:
+            int_arg = int(argument)
+            return discord.Color(int_arg)
+        except:
+            pass
         if argument[0] == "#":
             return self.parse_hex_number(argument[1:])
         if argument[0:2] == "0x":
@@ -271,6 +390,11 @@ class Color(ColorConverter):
         if arg.startswith("from_") or method is None or not inspect.ismethod(method):
             raise BadColourArgument(arg)
         return method()
+
+
+class Emoji(EmojiConverter):
+    async def convert(self, ctx: commands.Context, argument):
+        return await super().convert(ctx, argument)
 
 
 class CategoryChannel(CategoryChannelConverter):
@@ -320,7 +444,9 @@ class TextChannel(TextChannelConverter):
             for channel in guild.text_channels:
                 yield channel
 
-    async def convert(self, ctx: commands.Context, argument, *, news=False):
+    async def convert(
+        self, ctx: commands.Context, argument, *, news=False
+    ) -> discord.TextChannel:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
@@ -348,6 +474,10 @@ class TextChannel(TextChannelConverter):
             return result
         if news:
             result = [c for c in result if c.is_news()]
+        if len(result) == 1:
+            return result
+        if not result:
+            raise ChannelNotFound(argument)
         return await result_handler(ctx, result, argument)
 
 
@@ -356,7 +486,7 @@ class NewsChannel(TextChannel):
     Custom news channel converter, literally just searches for text channels and then checks if it's news.
     """
 
-    async def convert(slf, ctx, argument):
+    async def convert(self, ctx, argument) -> discord.TextChannel:
         return await super().convert(
             ctx, argument, news=True
         )  # Get matching text channels
@@ -372,7 +502,7 @@ class VoiceChannel(VoiceChannelConverter):
             for channel in guild.voice_channels:
                 yield channel
 
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(self, ctx: commands.Context, argument) -> discord.VoiceChannel:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
@@ -409,7 +539,7 @@ class StageChannel(StageChannelConverter):
             for channel in guild.stage_channels:
                 yield channel
 
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(self, ctx: commands.Context, argument) -> discord.StageChannel:
         bot = ctx.bot
         match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
         result = None
