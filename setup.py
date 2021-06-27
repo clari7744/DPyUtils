@@ -4,7 +4,7 @@ import subprocess
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-ver = "0.0.6"
+ver = "0.0.8"
 
 try:  # shamelessly stolen from jishaku
     ccount, cerr = subprocess.Popen(
@@ -32,5 +32,5 @@ setup(
     license="MIT",
     description="Some discord.py utils by Clari",
     long_description=long_description,
-    packages=["ContextEditor", "converters", "duration", "tasks"],
+    packages=["DPyUtils"],
 )

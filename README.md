@@ -1,21 +1,45 @@
 # dpy-utils
 Some extra discord.py utilities
 
-# Features:
-* Duration parsers: from `1y1w1d1h1m1s` format to seconds, and from seconds or timedelta to a namedtuple with each unit in it individually
-* Context editor: Allows users to edit their message, which will edit the command response.
-* Extra converters: Member, User, Role, TextChannel, VoiceChannel, StageChannel, CategoryChannel
-* Tasks system: A cog for a to-do list
+<details open>
+<summary>Overview:</summary><br>
 
-# Usage:
-* Tasks: Add `bot.load_extension("tasks")` to your main.py file.
-* Context Editor: Add `bot.load_extension("ContextEditor")` to your main.py file.
-* Extra Converters: Just `import converters` and use `converters.Member` etc.
-* Duration Parsers: Just `import duration` and use `duration.DurationParser` or `duration.parse()`
+# Features:
+* Duration utilities
+* Context editor: Allows users to edit their message, which will edit the command response.
+* Extra converters: 
+  * Advanced Converters: Member, User, Role, Color, TextChannel, VoiceChannel, StageChannel, CategoryChannel
+  * Added Converters: BotMember, HumanMember, BotUser, HumanUser, NewsChannel, AnyChannel, NonCategoryChannel
+* Tasks system: A cog for a to-do list
 
 # Coming Soon (More details later):
 * Debug Cog
-* Error Handler
+</details>
+
+<details>
+<summary>Duration Utilities</summary><br>
+
+# Utilities:
+* `duration.DurationParser`: A converter that converts input from `1y1w1d1h1m1s` format to seconds.
+* `duration.parse`: Accepts seconds or `datetime.timedelta`, and changes it to a `collections.namedtuple` with each unit in it individually (`duration.ParsedDuration(years=1, weeks=1, days=1, hours=1, minutes=1, seconds=1)`)
+* `duration.strfdur`: Accepts seconds, `datetime.timedelta`, or `duration.ParsedDuration` and converts it to a human-readable string.
+  - Example: `10000 seconds` -> `2 hours, 46 minutes, and 40 seconds`
+
+# Usage:
+To use the utilities provided in this module, just import `DPyUtils.duration`
+</details>
+
+<details>
+<summary>Converters</summary><br>
+
+
+</details>
+
+<details>
+<summary>Context Editor</summary><br>
+
+
+</details>
 
 
 

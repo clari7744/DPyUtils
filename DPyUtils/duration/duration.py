@@ -68,8 +68,10 @@ def parse(param: typing.Union[int, datetime.timedelta]):
     )
 
 
-def strfdur(param: typing.Union[int, datetime.timedelta]):
-    dur: ParsedDuration = parse(param)
+def strfdur(param: typing.Union[int, datetime.timedelta, ParsedDuration]):
+    dur: ParsedDuration = (
+        parse(param) if not isinstance(param, ParsedDuration) else param
+    )
     dict_times = {
         incr: getattr(dur, incr + "s")
         for incr in ["year", "week", "day", "hour", "minute", "second"]
