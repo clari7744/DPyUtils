@@ -212,4 +212,4 @@ class ContextEditor:
 
 
 def setup(bot: commands.Bot):
-    bot.load_extension(ContextEditor(bot))
+    ContextEditor(bot)
