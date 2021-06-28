@@ -1,4 +1,4 @@
-from utils import context, duration, converters, tasks
+from . import context, duration, converters, tasks
 from .converters import (
     Member,
     HumanMember,
@@ -17,6 +17,5 @@ from .converters import (
     AnyChannel,
     NonCategoryChannel,
 )
-
-from .context import Context, ContextEditor
+from .ContextEditor import Context, ContextEditor
 from .duration import DurationParser, ParsedDuration, parse as parse_duration, strfdur
