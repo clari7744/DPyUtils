@@ -197,6 +197,10 @@ class ContextEditor:
         await asyncio.sleep(1)
         self.bot.msg_cache.pop(payload.message_id, None)
 
+    # fix this lol
+    # if i want it to be a bot function then it probably should work better than this
+    # and i should fix that `self` and stuff
+
     async def get_del_emoji(self, bot: commands.Bot, message: discord.Message):
         """
         |coro|
@@ -205,7 +209,7 @@ class ContextEditor:
         ----------
         bot :class:`Bot`
             Your bot instance
-        message :class:`Message
+        message :class:`Message`
             The message object that you want to use to detect locale for fetching del_emoji
         """
         return bot.msg_del_emoji
