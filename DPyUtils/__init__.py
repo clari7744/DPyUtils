@@ -1,4 +1,4 @@
-from . import context, duration, converters, tasks
+from . import ContextEditor, duration, converters, tasks
 from .converters import (
     Member,
     HumanMember,
