@@ -209,3 +209,7 @@ class ContextEditor:
             The message object that you want to use to detect locale for fetching del_emoji
         """
         return bot.msg_del_emoji
+
+
+def setup(bot: commands.Bot):
+    bot.load_extension(ContextEditor(bot))
