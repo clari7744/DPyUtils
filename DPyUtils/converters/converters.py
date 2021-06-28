@@ -186,16 +186,16 @@ async def result_handler(ctx, result, argument):
     return result
 
 
-# async def check_bot(argument, result, #error, mem_type="EITHER"):
-#    if mem_type == "EITHER":
-#        return result
-#    if getattr(result, "bot", False) and mem_type == "BOT":
-#        raise (MemberNotBot(argument) if error == "Member" else UserNotBot(argument))
-#    if getattr(result, "bot", True) and mem_type == "HUMAN":
-#        raise (
-#            MemberNotHuman(argument) if error == "Member" else UserNotHuman(argument)
-#        )
-#    return result
+async def check_bot(argument, result, error, mem_type="EITHER"):
+    if mem_type == "EITHER":
+        return result
+    if not getattr(result, "bot", False) and mem_type == "BOT":
+        raise (MemberNotBot(argument) if error == "Member" else UserNotBot(argument))
+    if getattr(result, "bot", True) and mem_type == "HUMAN":
+        raise (
+            MemberNotHuman(argument) if error == "Member" else UserNotHuman(argument)
+        )
+    return result
 
 
 class Member(MemberConverter):
@@ -269,7 +269,7 @@ class Member(MemberConverter):
             if not result:
                 raise MemberNotFound(argument)
         if isinstance(result, discord.Member):
-            return result
+            return await check_bot(argument, result, "Member", mem_type=mem_type)
         return await result_handler(ctx, result, argument)
 
 
@@ -304,7 +304,7 @@ class User(UserConverter):
                     result = await ctx.bot.fetch_user(user_id)
                 except discord.HTTPException:
                     raise UserNotFound(argument) from None
-            return result
+            return await check_bot(argument, result, "User", mem_type=mem_type)
         arg = argument
         # Remove the '@' character if this is the first character from the argument
         if arg[0] == "@":
@@ -314,7 +314,6 @@ class User(UserConverter):
         if len(arg) > 5 and arg[-5] == "#":
             discrim = arg[-4:]
             name = arg[:-5]
-            #            predicate = lambda u: u.name == name and u.discriminator == discrim
             result = search(
                 argument,
                 tuple(ctx.bot.users),
@@ -323,12 +322,14 @@ class User(UserConverter):
                 mem_type=mem_type,
             )
             if result is not None:
-                return result
+                if isinstance(result, (discord.User, discord.ClientUser)):
+                    return await check_bot(argument, result, "User", mem_type=mem_type)
+                return await result_handler(ctx, result, argument)
         result = search(argument, tuple(ctx.bot.users), "name", mem_type=mem_type)
         if result is None:
             raise UserNotFound(argument)
         if isinstance(result, (discord.User, discord.ClientUser)):
-            return result
+            return await check_bot(argument, result, "User", mem_type=mem_type)
         return await result_handler(ctx, result, argument)
 
 
