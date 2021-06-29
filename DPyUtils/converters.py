@@ -6,6 +6,7 @@ from discord.ext.commands import (
     RoleConverter,
     ColorConverter,
     EmojiConverter,
+    GuildConverter,
     CategoryChannelConverter,
     TextChannelConverter,
     VoiceChannelConverter,
@@ -394,6 +395,12 @@ class Color(ColorConverter):
 
 
 class Emoji(EmojiConverter):
+    async def convert(self, ctx: commands.Context, argument):
+        # https://gist.github.com/Phxntxm/a91e0cfadb19b2071554d59edcd1df6c
+        return await super().convert(ctx, argument)
+
+
+class Guild(GuildConverter):
     async def convert(self, ctx: commands.Context, argument):
         return await super().convert(ctx, argument)
 

@@ -40,7 +40,7 @@ class Context(commands.Context):
                 pass
 
     async def _send(self, content, **kwargs):
-        perms: discord.Permissions = self.me.permissions_in(self.channel)
+        perms: discord.Permissions = self.permissions_for(self.me)
         if not perms.send_messages:
             raise commands.CheckFailure(
                 "Cannot Send",
@@ -105,7 +105,7 @@ class Context(commands.Context):
                 )  # Janky way of capping the dict
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
             return msg
-        if clear_invoke_react and self.me.permissions_in(self.channel).manage_messages:
+        if clear_invoke_react and self.permissions_for(self.me).manage_messages:
             await self.message.clear_reactions()
         ref = kwargs.pop("reference", None)
         if no_edit:
@@ -113,20 +113,14 @@ class Context(commands.Context):
             return await self.send(content, **kwargs)
         try:
             await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
-            if (
-                clear_response_react
-                and self.me.permissions_in(self.channel).manage_messages
-            ):
+            if clear_response_react and self.permissions_for(self.me).manage_messages:
                 await self.msg_cache[self.message.id].clear_reactions()
         except:
             self.msg_cache.pop(self.message.id, None)
             return await self.send(content, **kwargs)
         try:
             await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
-            if (
-                clear_response_react
-                and self.me.permissions_in(self.channel).manage_messages
-            ):
+            if clear_response_react and self.permissions_for(self.me).manage_messages:
                 await self.msg_cache[self.message.id].clear_reactions()
         except:
             self.msg_cache.pop(self.message.id, None)

@@ -7,7 +7,6 @@ from .converters import (
     BotUser,
     Role,
     Color,
-    Emoji,
     CategoryChannel,
     TextChannel,
     NewsChannel,
