@@ -184,13 +184,14 @@ class ContextEditor:
         await self.bot.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
+        chan = self.bot.get_channel(payload.channel_id)
+        if not chan:
+            return
         try:
-            msg = await self.bot.get_channel(payload.channel_id).fetch_message(
-                payload.message_id
-            )
+            msg = await chan.fetch_message(payload.message_id)
         except:
             return
-        if not msg.author.bot:
+        if not msg.author.bot and chan.permissions_for(chan.guild.me).send_messages:
             await self.bot.process_commands(msg)
 
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
