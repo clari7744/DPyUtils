@@ -148,6 +148,7 @@ class ContextEditor:
         bot.get_del_emoji = self.get_del_emoji
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
+        #        bot.invoke = self.invoke
 
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
@@ -171,6 +172,7 @@ class ContextEditor:
         ]
         self.bot.get_context = super(commands.Bot, self.bot).get_context
         self.bot.process_commands = super(commands.Bot, self.bot).process_commands
+        self.bot.invoke = super(commands.Bot, self.bot).invoke
         del self.bot.msg_cache
         del self.bot.msg_cache_size
         del self.bot.msg_del_emoji
@@ -182,6 +184,10 @@ class ContextEditor:
     async def process_commands(self, message: discord.Message):
         ctx = await self.bot.get_context(message, cls=Context)
         await self.bot.invoke(ctx)
+
+    #    async def invoke(self, ctx: commands.Context):
+    #        if ctx.command is not None:
+    #            await super(commands.Bot, self.bot).invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
         chan = self.bot.get_channel(payload.channel_id)
