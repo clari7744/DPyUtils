@@ -16,28 +16,46 @@ from discord.ext.commands.converter import _utils_get
 from discord.ext.commands.errors import *
 
 
-class MemberNotHuman(commands.BadArgument):
+class MemberNotHuman(BadArgument):
     def __init__(self, argument):
         self.argument = argument
         super().__init__('Could not convert "{}" to a human Member.'.format(argument))
 
 
-class UserNotHuman(commands.BadArgument):
+class UserNotHuman(BadArgument):
     def __init__(self, argument):
         self.argument = argument
         super().__init__('Could not convert "{}" to a human User.'.format(argument))
 
 
-class MemberNotBot(commands.BadArgument):
+class MemberNotBot(BadArgument):
     def __init__(self, argument):
         self.argument = argument
         super().__init__('Could not convert "{}" to a bot Member.'.format(argument))
 
 
-class UserNotBot(commands.BadArgument):
+class UserNotBot(BadArgument):
     def __init__(self, argument):
         self.argument = argument
         super().__init__('Could not convert "{}" to a bot User.'.format(argument))
+
+
+class ChannelNotFound(BadArgument):
+    """Exception raised when the bot can not find the channel.
+
+    This inherits from :exc:BadArgument
+
+    .. versionadded:: 1.5
+
+    Attributes
+    -----------
+    argument: :class:str
+        The channel supplied by the caller that was not found
+    """
+
+    def init(self, argument):
+        self.argument = argument
+        super().init('Thread "{}" not found.'.format(argument))
 
 
 def _get_from_guilds(bot, getter, argument):
@@ -130,7 +148,7 @@ async def result_handler(ctx, result, argument):
     if len(result) == 1:
         return result[0]
     if len(result) < 1:
-        raise commands.BadArgument(
+        raise BadArgument(
             "Your argument was invalid and somehow made it all the way to the multiple-result handler, please DM 💜Clari#7744 (642416218967375882) and provide the context that caused this to happen."
         )
     if len(result) > 20:
@@ -486,6 +504,45 @@ class TextChannel(TextChannelConverter):
             return result
         if not result:
             raise ChannelNotFound(argument)
+        return await result_handler(ctx, result, argument)
+
+
+class Thread(TextChannelConverter):
+    def get_all_threads(self):
+        for guild in self.guilds:
+            for thread in guild.threads:
+                yield thread
+
+    async def convert(self, ctx: commands.Context, argument):  # -> discord.Thread:
+        if str(discord.__version__)[0] != "2":
+            raise commands.CheckFailure("Version must be >2.0 to use this converter.")
+        bot = ctx.bot
+        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
+        result = None
+        guild = ctx.guild
+        bot.get_all_threads = self.get_all_threads
+        if match is None:
+            # not a mention
+            if guild:
+                result = search(argument, guild.threads, "name")
+            else:
+                result = search(argument, bot.get_all_threads(), "name")
+        else:
+            thread_id = int(match.group(1))
+            if guild:
+                result = guild.get_thread(thread_id)
+            else:
+                result = _get_from_guilds(bot, "get_thread", thread_id)
+            if not isinstance(result, discord.Thread):
+                raise ThreadNotFound(argument)
+        if result is None:
+            raise ThreadNotFound(argument)
+        if isinstance(result, discord.Thread):
+            return result
+        if len(result) == 1:
+            return result
+        if not result:
+            raise ThreadNotFound(argument)
         return await result_handler(ctx, result, argument)
 
 

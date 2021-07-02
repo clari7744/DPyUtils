@@ -55,8 +55,7 @@ def parse(param: typing.Union[int, datetime.timedelta]):
     )
     ts = int(seconds)
     for unit, sec in durations.items():
-        parsed[unit] = int(seconds // sec)
-        seconds = int(seconds - (parsed[unit] * sec))
+        parsed[unit], seconds = divmod(seconds, sec)
     return ParsedDuration(
         years=parsed["y"],
         weeks=parsed["w"],
