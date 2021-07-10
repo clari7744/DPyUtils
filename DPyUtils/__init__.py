@@ -18,4 +18,3 @@ from .converters import (
 from .ContextEditor import Context
 from .duration import DurationParser, ParsedDuration, parse as parse_duration, strfdur
 from .utils import load_extensions
-from .rtfd import RTFD
