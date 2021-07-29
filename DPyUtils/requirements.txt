@@ -1,7 +1,0 @@
-discord.py
-typing
-asyncio
-DiscordUtils
-postbin
-datetime
-setuptools

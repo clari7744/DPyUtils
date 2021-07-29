@@ -42,7 +42,7 @@ class DurationParser(commands.Converter):
             raise InvalidTimeFormat(argument)
         for item in match:
             seconds += float(item[:-1]) * durations[item[-1]]
-        return round(seconds)
+        return (argument, round(seconds))
 
 
 def parse(param: typing.Union[int, datetime.timedelta]):
@@ -75,7 +75,7 @@ def strfdur(param: typing.Union[int, datetime.timedelta, ParsedDuration]):
         incr: getattr(dur, incr + "s")
         for incr in ["year", "week", "day", "hour", "minute", "second"]
     }
-    times = [x for x in dict_times.items() if x[1]]
+    times = [(x[0], int(x[1])) for x in dict_times.items() if x[1]]
     if len(times) > 2:
         fmt = "{}, and {}".format(
             ", ".join(f"{t[1]} {t[0]}{'s' if t[1] != 1 else ''}" for t in times[:-1]),

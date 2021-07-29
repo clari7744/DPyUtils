@@ -131,8 +131,11 @@ class Context(commands.Context):
         except:
             self.msg_cache.pop(self.message.id, None)
             return await self.send(content, reference=ref, **kwargs)
-        msg = await self.channel.fetch_message(self.msg_cache[self.message.id].id)
-        self.bot.loop.create_task(self.reaction_delete(msg, del_em))
+        try:
+            msg = await self.channel.fetch_message(self.msg_cache[self.message.id].id)
+            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
+        except:
+            pass
         return msg
 
     async def reply(self, content: str = None, **kwargs):
@@ -148,7 +151,7 @@ class ContextEditor:
         bot.get_del_emoji = self.get_del_emoji
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
-        #        bot.invoke = self.invoke
+        bot.invoke = self.invoke
 
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
@@ -185,9 +188,11 @@ class ContextEditor:
         ctx = await self.bot.get_context(message, cls=Context)
         await self.bot.invoke(ctx)
 
-    #    async def invoke(self, ctx: commands.Context):
-    #        if ctx.command is not None:
-    #            await super(commands.Bot, self.bot).invoke(ctx)
+    async def invoke(self, ctx: commands.Context):
+        if ctx.command is not None:
+            if not self.bot.msg_cache.get(ctx.message.id, None):
+                await ctx.trigger_typing()
+            await super(commands.Bot, self.bot).invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
         chan = self.bot.get_channel(payload.channel_id)
