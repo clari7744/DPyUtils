@@ -29,11 +29,39 @@ class InvalidTimeFormat(commands.BadArgument):
         )
 
 
+class Duration:
+    def __init__(self, original: str, seconds: int):
+        if not isinstance(seconds, int):
+            raise TypeError("Seconds must be an integer!")
+        self._original = original
+        self._seconds = seconds
+
+    def __str__(self):
+        return self._original
+
+    def __int__(self):
+        return self._seconds
+
+    @property
+    def original(self):
+        """
+        Returns the original argument passed to the duration converter.
+        """
+        return self._original
+
+    @property
+    def seconds(self):
+        """
+        Returns the amount of seconds that the duration passed in was converted to.
+        """
+        return self._seconds
+
+
 class DurationParser(commands.Converter):
     # TODO: Create a docstring for this class
     async def convert(self, ctx, argument):
         try:
-            return int(argument)
+            return Duration(argument, int(argument))
         except:
             pass
         seconds = 0
@@ -42,7 +70,7 @@ class DurationParser(commands.Converter):
             raise InvalidTimeFormat(argument)
         for item in match:
             seconds += float(item[:-1]) * durations[item[-1]]
-        return (argument, round(seconds))
+        return Duration(argument, round(seconds))
 
 
 def parse(param: typing.Union[int, datetime.timedelta]):

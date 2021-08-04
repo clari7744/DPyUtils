@@ -16,6 +16,6 @@ from .converters import (
     NonCategoryChannel,
 )
 from .ContextEditor import Context
-from .duration import DurationParser, ParsedDuration, parse as parse_duration, strfdur
+from .duration import Duration, DurationParser, ParsedDuration, parse as parse_duration, strfdur
 from .utils import load_extensions, try_dm
 from .bot import Bot

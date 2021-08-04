@@ -134,14 +134,14 @@ class KillCommand(BadArgument):
     pass
 
 
-async def on_command_error(ctx, error):
+async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, KillCommand):
         await ctx.send(str(error), no_save=True, delete_after=5)
     else:
         await ctx.bot.converters_original_on_command_error(ctx, error)
 
 
-async def result_handler(ctx, result, argument):
+async def result_handler(ctx: commands.Context, result, argument):
     if not hasattr(ctx.bot, "converters_original_on_command_error"):
         ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
@@ -551,7 +551,7 @@ class NewsChannel(TextChannel):
     Custom news channel converter, literally just searches for text channels and then checks if it's news.
     """
 
-    async def convert(self, ctx, argument) -> discord.TextChannel:
+    async def convert(self, ctx: commands.Context, argument) -> discord.TextChannel:
         return await super().convert(
             ctx, argument, news=True
         )  # Get matching text channels
@@ -662,3 +662,16 @@ class NonCategoryChannel(AnyChannelBase):
     async def convert(self, ctx: commands.Context, argument):
         converters = [TextChannel, NewsChannel, VoiceChannel, StageChannel]
         return await super().convert(ctx, argument, converters)
+
+
+class IgnoreCaseLiteral(commands.Converter):
+    def __class_getitem__(self, *parameters):
+        self.parameters = tuple(str(param).lower() for param in parameters)
+        return self
+
+    async def convert(self, ctx: commands.Context, argument):
+        if str(argument).lower() not in self.parameters:
+            raise commands.BadArgument(
+                f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}"
+            )
+        return argument
