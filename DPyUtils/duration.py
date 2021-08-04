@@ -42,6 +42,9 @@ class Duration:
     def __int__(self):
         return self._seconds
 
+    def __iter__(self):
+        yield from (self._original, self._seconds)
+
     @property
     def original(self):
         """
