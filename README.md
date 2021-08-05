@@ -12,6 +12,7 @@ Windows:
 py -3 -m pip install -U git+https://github.com/Clari-7744/dpy-utils
 ```
 
+## Information
 <details open>
 <summary><strong>Overview:</strong></summary><br>
 
