@@ -72,6 +72,7 @@ class Context(commands.Context):
             Indicates whether to clear reactions from the response message. Defaults to `True`.
         del_em Union[:class:`bool`, :class:`int`, :class:`str`, :class:`Emoji`, None]
             Defines reaction that will be added to a message, that can then be clicked on to delete message. Set to `None` to disable for that message. Uses `bot.msg_del_emoji` by default, which can be set via an environment variable (`CTX_DELETE_EMOJI=str|int|bool`) or by initializing the class with `del_em=emoji`.
+            Defaults to 🗑 if not set.
         del_em_timeout :class:`int`
             The amount of seconds until the reaction deletion times out.
 
@@ -143,12 +144,21 @@ class Context(commands.Context):
 
 
 class ContextEditor:
-    def __init__(self, bot: commands.Bot, *, del_em=None):
+    def __init__(self, bot: commands.Bot, **kwargs):
+        # TODO Format this better later
+        """
+        Options:
+        `del_em` The emoji used for bot.msg_del_emoji
+        msg_cache_size :class:`int` The maximum size allowed for the cache before it starts removing messages.
+        """
         self.bot = bot
+        self.bot_super = super(bot.__class__, self.bot)
+
         bot.msg_cache = {}
-        bot.msg_cache_size = 500
-        bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI", None)
+        bot.msg_cache_size = kwargs.pop("msg_cache_size", 500)
+        bot.msg_del_emoji = kwargs.pop("del_em", os.getenv("CTX_DELETE_EMOJI", None))
         bot.get_del_emoji = self.get_del_emoji
+
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
         bot.invoke = self.invoke
@@ -156,33 +166,8 @@ class ContextEditor:
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
 
-    def cog_unload(self):
-        self.bot.extra_events["on_raw_message_edit"] = [
-            l
-            for l in self.bot.extra_events.get("on_raw_message_edit", [])
-            if l.__self__.__class__
-            != getattr(
-                self.bot.extensions.get("ContextEditor", None), "ContextEditor", None
-            )
-        ]
-        self.bot.extra_events["on_raw_message_delete"] = [
-            l
-            for l in self.bot.extra_events.get("on_raw_message_delete", [])
-            if l.__self__.__class__
-            != getattr(
-                self.bot.extensions.get("ContextEditor", None), "ContextEditor", None
-            )
-        ]
-        self.bot.get_context = super(commands.Bot, self.bot).get_context
-        self.bot.process_commands = super(commands.Bot, self.bot).process_commands
-        self.bot.invoke = super(commands.Bot, self.bot).invoke
-        del self.bot.msg_cache
-        del self.bot.msg_cache_size
-        del self.bot.msg_del_emoji
-        del self.bot.get_del_emoji
-
     async def get_context(self, message: discord.Message, *, cls=Context):
-        return await super(commands.Bot, self.bot).get_context(message, cls=cls)
+        return await self.bot_super.get_context(message, cls=cls)
 
     async def process_commands(self, message: discord.Message):
         ctx = await self.bot.get_context(message, cls=Context)
@@ -192,7 +177,7 @@ class ContextEditor:
         if ctx.command is not None:
             if not self.bot.msg_cache.get(ctx.message.id, None):
                 await ctx.trigger_typing()
-            await super(commands.Bot, self.bot).invoke(ctx)
+            await self.bot_super.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
         chan = self.bot.get_channel(payload.channel_id)
@@ -229,3 +214,20 @@ class ContextEditor:
 
 def setup(bot: commands.Bot):
     ContextEditor(bot)
+
+
+def teardown(bot: commands.Bot):
+    bot_super = super(bot.__class__, bot)
+    get_l = lambda l: discord.utils.find(
+        lambda e: e.__self__.__class__.__name__ == "ContextEditor",
+        extra_events["on_raw_message_" + l],
+    )
+    bot.remove_listener(get_l("edit"))
+    bot.remove_listener(get_l("delete"))
+
+    bot.get_context = bot_super.get_context
+    bot.process_commands = bot_super.process_commands
+    bot.invoke = bot_super.invoke
+
+    del bot.msg_cache, bot.msg_cache_size
+    del bot.msg_del_emoji, bot.get_del_emoji
