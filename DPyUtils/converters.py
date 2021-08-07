@@ -16,6 +16,9 @@ from discord.ext.commands.converter import _utils_get
 from discord.ext.commands.errors import *
 
 
+# TODO:: Update GuildChannel converters to reflect new d.py 2.0 streamlined state
+
+
 class MemberNotHuman(BadArgument):
     def __init__(self, argument):
         self.argument = argument
@@ -136,7 +139,7 @@ class KillCommand(BadArgument):
 
 async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, KillCommand):
-        await ctx.send(str(error), no_save=True, delete_after=5)
+        await ctx.channel.send(str(error), delete_after=5)
     else:
         await ctx.bot.converters_original_on_command_error(ctx, error)
 
@@ -167,9 +170,8 @@ async def result_handler(ctx: commands.Context, result, argument):
         .lower()
         .replace("chan", " chan")
     )
-    todel = await ctx.send(
+    todel = await ctx.channel.send(
         f"There were multiple matches for your search `{argument}`. Please send the number of the correct {t} below, or `cancel` this command and refine your search.\n\n{matchlist}",
-        no_save=True,
         delete_after=22,
         allowed_mentions=discord.AllowedMentions().none(),
     )
@@ -177,9 +179,7 @@ async def result_handler(ctx: commands.Context, result, argument):
         msg = await ctx.bot.wait_for(
             "message",
             timeout=20,
-            check=lambda m: (
-                re.match("\d+", m.content) or m.content.lower() == "cancel"
-            )
+            check=lambda m: (m.content.isdigit() or m.content.lower() in ["cancel"])
             and m.author == ctx.author
             and m.channel == ctx.channel,
         )
@@ -191,7 +191,7 @@ async def result_handler(ctx: commands.Context, result, argument):
             await todel.delete()
         except:
             pass
-    if msg.content.lower() == "cancel":
+    if msg.content.lower() in ["cancel"]:
         raise KillCommand("Canceled command.")
     try:
         num = int(msg.content)

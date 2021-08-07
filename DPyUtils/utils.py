@@ -19,7 +19,7 @@ def load_extensions(
     directories = [*directories]
     for _dir in directories:
         for file in os.listdir(_dir):
-            if file.endswith(".py") and not file.startswith("_"):
+            if file.endswith(".py") and not file.startswith("__"):
                 extensions.append(f"{_dir}.{file[:-3]}")
     print(f"Extensions to attempt to load: {', '.join(extensions)}")
     extensions = [e for e in extensions if e not in skip]

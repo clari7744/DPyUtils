@@ -2,6 +2,17 @@ import discord, typing
 from discord.ext import commands
 
 
+def is_guild_owner():
+    def pred(ctx: commands.Context):
+        if ctx.author.id == ctx.guild.owner_id:
+            return True
+        raise commands.CheckFailure(
+            f"This command can only be used by the guild owner!"
+        )
+
+    return commands.check(pred)
+
+
 def check_hierarchy(
     ctx: commands.Context,
     obj: typing.Union[discord.Member, discord.Role],

@@ -1,3 +1,4 @@
+from .bot import Bot
 from .converters import (
     Member,
     HumanMember,
@@ -15,6 +16,7 @@ from .converters import (
     AnyChannel,
     NonCategoryChannel,
 )
+from .checks import check_hierarchy, is_guild_owner
 from .ContextEditor import Context
 from .duration import (
     Duration,
@@ -24,4 +26,3 @@ from .duration import (
     strfdur,
 )
 from .utils import load_extensions, try_dm
-from .bot import Bot
