@@ -41,16 +41,17 @@ class Context(commands.Context):
 
     async def _send(self, content, **kwargs):
         perms: discord.Permissions = self.channel.permissions_for(self.me)
+        def error(thing):
+            raise commands.CheckFailure(
+                "Cannot Send",
+                f"I don't have permission to {thing} in {self.channel.mention}!",
+            )   
         if not perms.send_messages:
-            raise commands.CheckFailure(
-                "Cannot Send",
-                f"I don't have permission to send messages in {self.channel.mention}!",
-            )
-        if kwargs.get("embed", None) and not perms.embed_links:
-            raise commands.CheckFailure(
-                "Cannot Send",
-                f"I don't have permission to embed links in {self.channel.mention}!",
-            )
+            error('send messages')
+        if kwargs.get("embed", kwargs.get('embeds', None)) and not perms.embed_links:
+            error('embed links')
+        if kwargs.get('file', kwargs.get('files', None)) and not perms.attach_files:
+            error('attach files')
         return await super().send(content, **kwargs)
 
     async def send(self, content: str = None, **kwargs):
@@ -183,11 +184,14 @@ class ContextEditor:
         chan = self.bot.get_channel(payload.channel_id)
         if not chan:
             return
+        me =chan.me if isinstance(chan, discord.DMChannel) else chan.guild.me
+        if not chan.permissions_for(me).read_messages:
+            return
         try:
             msg = await chan.fetch_message(payload.message_id)
         except:
             return
-        if not msg.author.bot and chan.permissions_for(chan.guild.me).send_messages:
+        if not msg.author.bot and chan.permissions_for(me).send_messages:
             await self.bot.process_commands(msg)
 
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
