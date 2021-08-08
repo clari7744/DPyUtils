@@ -1,64 +1,59 @@
 import discord, re, asyncio, inspect
 from discord.ext import commands
-from discord.ext.commands import (
+from discord.ext.commands.converter import (
+    IDConverter,
     MemberConverter,
     UserConverter,
     RoleConverter,
-    ColorConverter,
-    EmojiConverter,
     GuildConverter,
+    GuildChannelConverter,
     CategoryChannelConverter,
     TextChannelConverter,
+    ThreadConverter,
     VoiceChannelConverter,
     StageChannelConverter,
+    ColorConverter,
+    EmojiConverter,
 )
-from discord.ext.commands.converter import _utils_get
-from discord.ext.commands.errors import *
+from discord.ext.commands.converter import TT, CT, _utils_get
+from discord.ext.commands.errors import (
+    ArgumentParsingError,
+    BadArgument,
+    BadColorArgument,
+    ChannelNotFound,
+    MemberNotFound,
+    NoPrivateMessage,
+    RoleNotFound,
+    ThreadNotFound,
+    UserNotFound,
+)
+from typing import Iterable, Type, Literal
 
 
 # TODO:: Update GuildChannel converters to reflect new d.py 2.0 streamlined state
 
 
-class MemberNotHuman(BadArgument):
+class UserNotType(BadArgument):
+    def __init__(
+        self,
+        argument,
+        _type: Literal["bot", "human"],
+        _class: Literal["Member", "User"],
+    ):
+        self.argument = argument
+        super().__init__(
+            'Could not convert "{}" to a {} {}.'.format(argument, _type, _class)
+        )
+
+
+class KillCommand(BadArgument):
+    pass
+
+
+class InvalidPermission(BadArgument):
     def __init__(self, argument):
         self.argument = argument
-        super().__init__('Could not convert "{}" to a human Member.'.format(argument))
-
-
-class UserNotHuman(BadArgument):
-    def __init__(self, argument):
-        self.argument = argument
-        super().__init__('Could not convert "{}" to a human User.'.format(argument))
-
-
-class MemberNotBot(BadArgument):
-    def __init__(self, argument):
-        self.argument = argument
-        super().__init__('Could not convert "{}" to a bot Member.'.format(argument))
-
-
-class UserNotBot(BadArgument):
-    def __init__(self, argument):
-        self.argument = argument
-        super().__init__('Could not convert "{}" to a bot User.'.format(argument))
-
-
-class ChannelNotFound(BadArgument):
-    """Exception raised when the bot can not find the channel.
-
-    This inherits from :exc:BadArgument
-
-    .. versionadded:: 1.5
-
-    Attributes
-    -----------
-    argument: :class:str
-        The channel supplied by the caller that was not found
-    """
-
-    def init(self, argument):
-        self.argument = argument
-        super().init('Thread "{}" not found.'.format(argument))
+        super().__init__(f"{argument} is not a valid permission!")
 
 
 def _get_from_guilds(bot, getter, argument):
@@ -106,24 +101,35 @@ def search(argument, iterable, *attrs: str, mem_type="EITHER", **kwargs):
             and result
             and mem_type != "EITHER"
         ):
-            if mem_type == "BOT":
-                result = [x for x in result if x.bot]
-                if not result:
-                    raise (
-                        MemberNotBot(argument)
+            result = [
+                x
+                for x in result
+                if (
+                    x.bot
+                    if mem_type == "BOT"
+                    else not x.bot
+                    if mem_type == "HUMAN"
+                    else False
+                )
+            ]
+            if not result:
+                raise (
+                    UserNotType(
+                        argument,
+                        "bot"
+                        if mem_type == "BOT"
+                        else "human"
+                        if mem_type == "HUMAN"
+                        else "???",
+                        "Member"
                         if isinstance(iterable[0], discord.Member)
-                        else UserNotBot(argument)
+                        else "User"
+                        if isinstance(iterable[0], discord.User)
+                        else "???",
                     )
-            elif mem_type == "HUMAN":
-                result = [x for x in result if not x.bot]
-                if not result:
-                    raise (
-                        MemberNotHuman(argument)
-                        if isinstance(iterable[0], discord.Member)
-                        else UserNotHuman(argument)
-                    )
+                )
             else:
-                raise commands.ArgumentParsingError(
+                raise ArgumentParsingError(
                     "Oh no! Something's gone wrong with the converter! Please DM 💜Clari#7744 (642416218967375882) the context of what caused this to break."
                 )
     if len(result) < 1:
@@ -131,10 +137,6 @@ def search(argument, iterable, *attrs: str, mem_type="EITHER", **kwargs):
     if len(result) == 1:
         return result[0]
     return result
-
-
-class KillCommand(BadArgument):
-    pass
 
 
 async def on_command_error(ctx: commands.Context, error):
@@ -165,7 +167,7 @@ async def result_handler(ctx: commands.Context, result, argument):
         ]
     )
     t = (
-        re.match("<class 'discord\..+?\.(.+?)'>", str(type(result[0])))
+        re.match(r"<class 'discord\..+?\.(.+?)'>", str(type(result[0])))
         .group(1)
         .lower()
         .replace("chan", " chan")
@@ -208,12 +210,14 @@ async def result_handler(ctx: commands.Context, result, argument):
 async def check_bot(argument, result, error, mem_type="EITHER"):
     if mem_type == "EITHER":
         return result
-    if not getattr(result, "bot", False) and mem_type == "BOT":
-        raise (MemberNotBot(argument) if error == "Member" else UserNotBot(argument))
-    if getattr(result, "bot", True) and mem_type == "HUMAN":
-        raise (
-            MemberNotHuman(argument) if error == "Member" else UserNotHuman(argument)
-        )
+    if mem_type == "BOT":
+        if not getattr(result, "bot", False):
+            raise UserNotType(argument, "bot", error)
+        return result
+    elif mem_type == "HUMAN":
+        if getattr(result, "bot", True):
+            raise UserNotType(argument, "human", error)
+        return result
     return result
 
 
@@ -312,7 +316,6 @@ class User(UserConverter):
     ) -> discord.User:
         match = self._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
         result = None
-        state = ctx._state
         if match is not None:
             user_id = int(match.group(1))
             result = ctx.bot.get_user(user_id) or _utils_get(
@@ -332,7 +335,7 @@ class User(UserConverter):
         # check for discriminator if it exists,
         if len(arg) > 5 and arg[-5] == "#":
             discrim = arg[-4:]
-            name = arg[:-5]
+            name = arg[:-5]  # pylint: disable=unused-variable
             result = search(
                 argument,
                 tuple(ctx.bot.users),
@@ -408,7 +411,7 @@ class Color(ColorConverter):
             pass
         method = getattr(discord.Colour, arg, None)
         if arg.startswith("from_") or method is None or not inspect.ismethod(method):
-            raise BadColourArgument(arg)
+            raise BadColorArgument(arg)
         return method()
 
 
@@ -423,74 +426,52 @@ class Guild(GuildConverter):
         return await super().convert(ctx, argument)
 
 
-class CategoryChannel(CategoryChannelConverter):
-    """
-    Custom converter to allow for looser searching, inherits from commands.CategoryChannelConverter
-    """
-
-    def get_all_categories(self):
+def get_all(bot, thing):
+    def _get_all(self):
         for guild in self.guilds:
-            for channel in guild.categories:
+            for channel in getattr(guild, thing):
                 yield channel
 
-    async def convert(self, ctx: commands.Context, argument):
+    if not getattr(bot, f"get_all_{thing}", False):
+        setattr(bot, f"get_all_{thing}", _get_all)
+
+
+class GuildChannel(GuildChannelConverter):
+    @staticmethod
+    async def _resolve_channel(
+        ctx: commands.Context,
+        argument: str,
+        attribute: str,
+        _type: Type[CT],
+        *,
+        news=False,
+    ):
         bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
+        for t in "categories text_channels voice_chanmels stage_channels".split():
+            get_all(bot, t)
+        match = IDConverter._get_id_match(argument) or re.match(
+            r"<#([0-9]{15,20})>$", argument
+        )
         result = None
         guild = ctx.guild
-        bot.get_all_categories = self.get_all_categories
         if match is None:
             # not a mention
             if guild:
-                result = search(argument, guild.categories, "name")
+                iterable: Iterable[CT] = getattr(guild, attribute)
+                result = search(argument, iterable, "name")
             else:
-                result = search(argument, bot.get_all_categories(), "name")
+                result = search(
+                    argument,
+                    getattr(bot, f"get_all_{attribute}", bot.get_all_channels)(),
+                    "name",
+                )
         else:
             channel_id = int(match.group(1))
             if guild:
                 result = guild.get_channel(channel_id)
             else:
                 result = _get_from_guilds(bot, "get_channel", channel_id)
-            if not isinstance(result, discord.CategoryChannel):
-                raise ChannelNotFound(argument)
-        if result is None:
-            raise ChannelNotFound(argument)
-        if isinstance(result, discord.CategoryChannel):
-            return result
-        return await result_handler(ctx, result, argument)
-
-
-class TextChannel(TextChannelConverter):
-    """
-    Custom converter to allow for looser searching, inherits from commands.TextChannelConverter
-    """
-
-    def get_all_text_channels(self):
-        for guild in self.guilds:
-            for channel in guild.text_channels:
-                yield channel
-
-    async def convert(
-        self, ctx: commands.Context, argument, *, news=False
-    ) -> discord.TextChannel:
-        bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
-        result = None
-        guild = ctx.guild
-        bot.get_all_text_channels = self.get_all_text_channels
-        if match is None:
-            # not a mention
-            if guild:
-                result = search(argument, guild.text_channels, "name")
-            else:
-                result = search(argument, bot.get_all_text_channels(), "name")
-        else:
-            channel_id = int(match.group(1))
-            if guild:
-                result = guild.get_channel(channel_id)
-            else:
-                result = _get_from_guilds(bot, "get_channel", channel_id)
-            if not isinstance(result, discord.TextChannel):
+            if not isinstance(result, _type):
                 raise ChannelNotFound(argument)
         if result is None:
             raise ChannelNotFound(argument)
@@ -500,139 +481,105 @@ class TextChannel(TextChannelConverter):
             return result
         if news:
             result = [c for c in result if c.is_news()]
-        if len(result) == 1:
+        if isinstance(result, _type):
             return result
-        if not result:
-            raise ChannelNotFound(argument)
         return await result_handler(ctx, result, argument)
 
-
-class Thread(TextChannelConverter):
-    def get_all_threads(self):
-        for guild in self.guilds:
-            for thread in guild.threads:
-                yield thread
-
-    async def convert(self, ctx: commands.Context, argument):  # -> discord.Thread:
-        if str(discord.__version__)[0] != "2":
-            raise commands.CheckFailure("Version must be >2.0 to use this converter.")
+    @staticmethod
+    async def _resolve_thread(
+        ctx: commands.Context, argument: str, attribute: str, _type: Type[TT]
+    ):
         bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
+        get_all(bot, "threads")
+        match = IDConverter._get_id_match(argument) or re.match(
+            r"<#([0-9]{15,20})>$", argument
+        )
         result = None
         guild = ctx.guild
-        bot.get_all_threads = self.get_all_threads
         if match is None:
             # not a mention
             if guild:
-                result = search(argument, guild.threads, "name")
+                iterable: Iterable[TT] = getattr(guild, attribute)
+                result = search(argument, iterable, "name")
             else:
-                result = search(argument, bot.get_all_threads(), "name")
+                result = search(
+                    argument,
+                    getattr(bot, f"get_all_{attribute}", bot.get_all_channels)(),
+                    "name",
+                )
         else:
             thread_id = int(match.group(1))
             if guild:
                 result = guild.get_thread(thread_id)
-            else:
-                result = _get_from_guilds(bot, "get_thread", thread_id)
-            if not isinstance(result, discord.Thread):
+            if not isinstance(result, _type):
                 raise ThreadNotFound(argument)
-        if result is None:
+        if result is None or not isinstance(result, _type):
             raise ThreadNotFound(argument)
-        if isinstance(result, discord.Thread):
-            return result
-        if len(result) == 1:
-            return result
-        if not result:
-            raise ThreadNotFound(argument)
+
         return await result_handler(ctx, result, argument)
+
+
+class CategoryChannel(CategoryChannelConverter):
+    async def convert(
+        self, ctx: commands.Context, argument: str
+    ) -> discord.CategoryChannel:
+        return GuildChannelConverter._resolve_channel(
+            ctx, argument, "categories", discord.CategoryChannel
+        )
+
+
+class TextChannel(TextChannelConverter):
+    async def convert(
+        self, ctx: commands.Context, argument: str
+    ) -> discord.CategoryChannel:
+        return await GuildChannel._resolve_channel(
+            ctx, argument, "text_channel", discord.TextChannel
+        )
 
 
 class NewsChannel(TextChannel):
-    """
-    Custom news channel converter, literally just searches for text channels and then checks if it's news.
-    """
-
-    async def convert(self, ctx: commands.Context, argument) -> discord.TextChannel:
-        return await super().convert(
-            ctx, argument, news=True
-        )  # Get matching text channels
+    async def convert(
+        self, ctx: commands.Context, argument: str
+    ) -> discord.TextChannel:
+        return await GuildChannel._resolve_channel(
+            ctx, argument, "text_channel", discord.TextChannel, news=True
+        )
 
 
 class VoiceChannel(VoiceChannelConverter):
-    """
-    Custom converter to allow for looser searching, inherits from commands.VoiceChannelConverter
-    """
-
-    def get_all_voice_channels(self):
-        for guild in self.guilds:
-            for channel in guild.voice_channels:
-                yield channel
-
-    async def convert(self, ctx: commands.Context, argument) -> discord.VoiceChannel:
-        bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
-        result = None
-        guild = ctx.guild
-        bot.get_all_voice_channels = self.get_all_voice_channels
-        if match is None:
-            # not a mention
-            if guild:
-                result = search(argument, guild.voice_channels, "name")
-            else:
-                result = search(argument, bot.get_all_voice_channels(), "name")
-        else:
-            channel_id = int(match.group(1))
-            if guild:
-                result = guild.get_channel(channel_id)
-            else:
-                result = _get_from_guilds(bot, "get_channel", channel_id)
-            if not isinstance(result, discord.VoiceChannel):
-                raise ChannelNotFound(argument)
-        if result is None:
-            raise ChannelNotFound(argument)
-        if isinstance(result, discord.VoiceChannel):
-            return result
-        return await result_handler(ctx, result, argument)
+    async def convert(
+        self, ctx: commands.Context, argument: str
+    ) -> discord.VoiceChannel:
+        return await GuildChannel._resolve_channel(
+            ctx, argument, "voice_channels", discord.VoiceChannel
+        )
 
 
 class StageChannel(StageChannelConverter):
-    """
-    Custom converter to allow for looser searching, inherits from commands.StageChannelConverter
-    """
+    async def convert(
+        self, ctx: commands.Context, argument: str
+    ) -> discord.StageChannel:
+        return await GuildChannel._resolve_channel(
+            ctx, argument, "stage_channels", discord.StageChannel
+        )
 
-    def get_all_stage_channels(self):
-        for guild in self.guilds:
-            for channel in guild.stage_channels:
-                yield channel
 
-    async def convert(self, ctx: commands.Context, argument) -> discord.StageChannel:
-        bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r"<#([0-9]+)>$", argument)
-        result = None
-        guild = ctx.guild
-        bot.get_all_stage_channels = self.get_all_stage_channels
-        if match is None:
-            # not a mention
-            if guild:
-                result = search(argument, guild.stage_channels, "name")
-            else:
-                result = search(argument, bot.get_all_stage_channels(), "name")
-        else:
-            channel_id = int(match.group(1))
-            if guild:
-                result = guild.get_channel(channel_id)
-            else:
-                result = _get_from_guilds(bot, "get_channel", channel_id)
-            if not isinstance(result, discord.StageChannel):
-                raise ChannelNotFound(argument)
-        if result is None:
-            raise ChannelNotFound(argument)
-        if isinstance(result, discord.StageChannel):
-            return result
-        return await result_handler(ctx, result, argument)
+class Thread(ThreadConverter):
+    async def convert(self, ctx: commands.Context, argument: str) -> discord.Thread:
+        return await GuildChannel._resolve_thread(
+            ctx, argument, "threads", discord.Thread
+        )
 
 
 class AnyChannelBase(commands.Converter):
-    async def convert(self, ctx: commands.Context, argument, converters):
+    converters: list
+
+    async def convert(self, ctx: commands.Context, argument, converters=[]):
+        converters = converters or self.converters
+        if not all(issubclass(c, commands.GuildChannelConverter) for c in converters):
+            raise TypeError(
+                "All converters must be a subclass of `commands.GuildChannelConverter`"
+            )
         result = None
         for converter in converters:
             if result:
@@ -647,21 +594,17 @@ class AnyChannelBase(commands.Converter):
 
 
 class AnyChannel(AnyChannelBase):
-    async def convert(self, ctx: commands.Context, argument):
-        converters = [
-            CategoryChannel,
-            TextChannel,
-            NewsChannel,
-            VoiceChannel,
-            StageChannel,
-        ]
-        return await super().convert(ctx, argument, converters)
+    converters = [
+        CategoryChannel,
+        TextChannel,
+        VoiceChannel,
+        StageChannel,
+        Thread,
+    ]
 
 
 class NonCategoryChannel(AnyChannelBase):
-    async def convert(self, ctx: commands.Context, argument):
-        converters = [TextChannel, NewsChannel, VoiceChannel, StageChannel]
-        return await super().convert(ctx, argument, converters)
+    converters = [TextChannel, VoiceChannel, StageChannel, Thread]
 
 
 class IgnoreCaseLiteral(commands.Converter):
@@ -675,3 +618,17 @@ class IgnoreCaseLiteral(commands.Converter):
                 f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}"
             )
         return argument
+
+
+class Permissions(commands.Converter):
+    def convert(self, ctx: commands.Context, argument):
+        if argument.isdigit():
+            return discord.Permissions(int(argument))
+        perms = argument.replace("server", "guild").lower().split()
+        perm = discord.Permissions()
+        for p in perms:
+            try:
+                setattr(perm, p, True)
+            except:
+                raise InvalidPermission(p)
+        return perm
