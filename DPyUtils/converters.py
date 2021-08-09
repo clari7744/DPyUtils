@@ -68,7 +68,7 @@ def search(
     argument,
     iterable,
     *attrs: str,
-    mem_type: typing.Literal["EITHER", "BOT", "HUMAN"] = "EITHER",
+    mem_type: Literal["EITHER", "BOT", "HUMAN"] = "EITHER",
     **kwargs,
 ):
     discrim = kwargs.pop("discriminator", kwargs.pop("discrim", None))
@@ -105,16 +105,19 @@ def search(
             if mem_type in ["BOT", "HUMAN"]:
                 if mem_type == "BOT":
                     result = [x for x in result if x.bot]
-                    if not result:
-                        raise UserNotType(argument, "bot", _m_or_u(iterable))
                 elif mem_type == "HUMAN":
                     result = [x for x in result if not x.bot]
-                    if not result:
-                        raise UserNotType(argument, "human", _m_or_u(iterable))
             else:
                 raise ArgumentParsingError(
                     "Oh no! Something's gone wrong with the converter! Please DM 💜Clari#7744 (642416218967375882) the context of what caused this to break."
                 )
+
+    if isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser)):
+        if not result:
+            if mem_type == "BOT":
+                raise UserNotType(argument, "bot", _m_or_u(iterable))
+            elif mem_type == "HUMAN":
+                raise UserNotType(argument, "human", _m_or_u(iterable))
     if len(result) < 1:
         return None
     if len(result) == 1:
@@ -194,7 +197,7 @@ async def check_bot(
     argument,
     result,
     error,
-    mem_type: typing.Literal["EITHER", "MEMBER", "BOT"] = "EITHER",
+    mem_type: Literal["EITHER", "MEMBER", "BOT"] = "EITHER",
 ):
     if mem_type == "EITHER":
         return result
