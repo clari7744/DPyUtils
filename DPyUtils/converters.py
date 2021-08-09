@@ -15,7 +15,7 @@ from discord.ext.commands.converter import (
     ColorConverter,
     EmojiConverter,
 )
-from discord.ext.commands.converter import TT, CT, _utils_get
+from discord.ext.commands.converter import TT, CT, _utils_get, _get_from_guilds
 from discord.ext.commands.errors import (
     ArgumentParsingError,
     BadArgument,
@@ -56,18 +56,23 @@ class InvalidPermission(BadArgument):
         super().__init__(f"{argument} is not a valid permission!")
 
 
-def _get_from_guilds(bot, getter, argument):
-    result = None
-    for guild in bot.guilds:
-        result = getattr(guild, getter)(argument)
-        if result:
-            return result
-    return result
+def _m_or_u(iterable):
+    if isinstance(iterable[0], discord.Member):
+        return "Member"
+    if isinstance(iterable[0], discord.User):
+        return "User"
+    return "???"
 
 
-def search(argument, iterable, *attrs: str, mem_type="EITHER", **kwargs):
-    discrim = kwargs.pop("discrim", None)
-    discrim = kwargs.pop("discriminator", discrim)
+def search(
+    argument,
+    iterable,
+    *attrs: str,
+    mem_type: typing.Literal["EITHER", "BOT", "HUMAN"] = "EITHER",
+    **kwargs,
+):
+    discrim = kwargs.pop("discriminator", kwargs.pop("discrim", None))
+    extra_checks = kwargs.pop("extra_checks", [])
     iterable = tuple(iterable)
     if len(iterable) < 1:
         raise Exception("Iterable is empty.")
@@ -86,48 +91,26 @@ def search(argument, iterable, *attrs: str, mem_type="EITHER", **kwargs):
             [argument.lower() in getattr(x, attr, None).lower() for attr in attrs]
         ),
     ]
+    checks.extend(extra_checks)
     for check in checks:
         if result:
             break
         result = [x for x in iterable if check(x)]
         if (
             isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser))
-            and discrim
             and result
         ):
-            result = [x for x in result if x.discriminator == discrim] or []
-        if (
-            isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser))
-            and result
-            and mem_type != "EITHER"
-        ):
-            result = [
-                x
-                for x in result
-                if (
-                    x.bot
-                    if mem_type == "BOT"
-                    else not x.bot
-                    if mem_type == "HUMAN"
-                    else False
-                )
-            ]
-            if not result:
-                raise (
-                    UserNotType(
-                        argument,
-                        "bot"
-                        if mem_type == "BOT"
-                        else "human"
-                        if mem_type == "HUMAN"
-                        else "???",
-                        "Member"
-                        if isinstance(iterable[0], discord.Member)
-                        else "User"
-                        if isinstance(iterable[0], discord.User)
-                        else "???",
-                    )
-                )
+            if discrim:
+                result = [x for x in result if x.discriminator == discrim]
+            if mem_type in ["BOT", "HUMAN"]:
+                if mem_type == "BOT":
+                    result = [x for x in result if x.bot]
+                    if not result:
+                        raise UserNotType(argument, "bot", _m_or_u(iterable))
+                elif mem_type == "HUMAN":
+                    result = [x for x in result if not x.bot]
+                    if not result:
+                        raise UserNotType(argument, "human", _m_or_u(iterable))
             else:
                 raise ArgumentParsingError(
                     "Oh no! Something's gone wrong with the converter! Please DM 💜Clari#7744 (642416218967375882) the context of what caused this to break."
@@ -207,7 +190,12 @@ async def result_handler(ctx: commands.Context, result, argument):
     return result
 
 
-async def check_bot(argument, result, error, mem_type="EITHER"):
+async def check_bot(
+    argument,
+    result,
+    error,
+    mem_type: typing.Literal["EITHER", "MEMBER", "BOT"] = "EITHER",
+):
     if mem_type == "EITHER":
         return result
     if mem_type == "BOT":

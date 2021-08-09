@@ -35,5 +35,5 @@ from .duration import (
     parse as parse_duration,
     strfdur,
 )
-from .flags import Flag, flag, FlagConverter, FlagIsSwitch
+from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
 from .utils import load_extensions, try_dm

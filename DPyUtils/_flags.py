@@ -75,6 +75,8 @@ def flag(
     switch: :class:`str`
         Whether flag will accept an argument or not. Defaults to true, if false then will raise an error if an argument is passed.
     """
+    if switch and default is MISSING:
+        default = False
     return Flag(
         name=name,
         aliases=aliases,
@@ -131,10 +133,7 @@ class FlagConverter(
                             raise FlagIsSwitch(last_flag)
                         result[last_flag.name] = [value]
                     else:
-                        if (
-                            not bool(last_flag.default)
-                            or flag.default is discord.utils.MISSING
-                        ):
+                        if not bool(last_flag.default):
                             result[last_flag.name] = ["True"]
                         else:
                             result[last_flag.name] = ["False"]
@@ -174,3 +173,38 @@ class FlagConverter(
 
         # Verification of values will come at a later stage
         return result
+
+
+class Command(commands.Command):
+    def __init__(self, func, **kwargs):
+        super().__init__(func, **kwargs)
+        self.flags = kwargs.get("flags", getattr(func, "__flags__", None))
+
+
+def command(name=None, cls=None, **attrs):
+    if cls is None:
+        cls = Command
+
+    def decorator(func):
+        if isinstance(func, Command):
+            raise TypeError("Callback is already a command.")
+        return cls(func, name=name, **attrs)
+
+    return decorator
+
+
+commands.command = command
+
+
+def flags(flags: commands.FlagConverter):
+    if not issubclass(flags, commands.FlagConverter):
+        raise TypeError(f"{flags} must be a subclass of `commands.FlagConverter`.")
+
+    def deco(func):
+        if isinstance(func, commands.Command):
+            func.flags = flags
+        else:
+            func.__flags__ = flags
+        return func
+
+    return deco
