@@ -37,5 +37,3 @@ from .duration import (
 )
 from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
 from .utils import load_extensions, try_dm
-
-from .rtfd import RTFD

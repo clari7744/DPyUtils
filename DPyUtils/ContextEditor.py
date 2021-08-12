@@ -9,34 +9,44 @@ class Context(commands.Context):
         self.msg_cache_size = self.bot.msg_cache_size
 
     async def reaction_delete(self, msg: discord.Message, del_em):
-        if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"): # 
-            del_em = "🗑️" # If it's only a bool, then default to trash can unicode
-        if not del_em: # It wasn't enabled
+        if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):  #
+            del_em = "🗑️"  # If it's only a bool, then default to trash can unicode
+        if not del_em:  # It wasn't enabled
             return
         if not isinstance(del_em, discord.Emoji):
             try:
-                del_em = await self.bot.fetch_emoji(int(del_em)) # Get a custom emoji by ID if possible
+                del_em = await self.bot.fetch_emoji(
+                    int(del_em)
+                )  # Get a custom emoji by ID if possible
             except:
-                del_em = str(del_em) # It's either unicode, full custom format `<a?:name:ID>`, or trash
+                del_em = str(
+                    del_em
+                )  # It's either unicode, full custom format `<a?:name:ID>`, or trash
         try:
-            await msg.add_reaction(del_em) # Attempt to add the reaction
+            await msg.add_reaction(del_em)  # Attempt to add the reaction
         except:
-            return # It failed, so do nothing 
+            return  # It failed, so do nothing
         try:
             r, u = await self.bot.wait_for(
                 "reaction_add",
                 check=lambda r, u: str(r.emoji) == del_em
-                and (u.id == self.author.id or r.message.channel.permissions_for(u).manage_messages)
+                and not u.bot
+                and (
+                    u.id == self.author.id
+                    or r.message.channel.permissions_for(u).manage_messages
+                )
                 and r.message.id == msg.id,
                 timeout=120,
-            ) # Wait for the author or a user with manage_messages to click the delete reaction
+            )  # Wait for the author or a user with manage_messages to click the delete reaction
         except asyncio.TimeoutError:
-            await msg.remove_reaction(del_em, self.me) # They didn't click within two minutes, so delete the reaction
+            await msg.remove_reaction(
+                del_em, self.me
+            )  # They didn't click within two minutes, so delete the reaction
         else:
             try:
-                await msg.delete() # They *did* click the reaction, so attempt to delete the message
+                await msg.delete()  # They *did* click the reaction, so attempt to delete the message
             except:
-                pass # Weird things happen sometimes
+                pass  # Weird things happen sometimes
 
     async def _send(self, content, **kwargs):
         perms: discord.Permissions = self.channel.permissions_for(self.me)
@@ -45,15 +55,23 @@ class Context(commands.Context):
             raise commands.CheckFailure(
                 "Cannot Send",
                 f"I don't have permission to {thing} in {self.channel.mention}!",
-            ) # A harmless error instead of icky 4xx
+            )  # A harmless error instead of icky 4xx
 
-        if not perms.send_messages: # Most basic can't send that you'd think discord.py would handle
+        if (
+            not perms.send_messages
+        ):  # Most basic can't send that you'd think discord.py would handle
             error("send messages")
-        if kwargs.get("embed", kwargs.get("embeds", None)) and not perms.embed_links: # it's trying to send an embed without perms, so fail lol
+        if (
+            kwargs.get("embed", kwargs.get("embeds", None)) and not perms.embed_links
+        ):  # it's trying to send an embed without perms, so fail lol
             error("embed links")
-        if kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files: # same as embeds but files
+        if (
+            kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files
+        ):  # same as embeds but files
             error("attach files")
-        return await super().send(content, **kwargs) # whoooo all permission checks were passed
+        return await super().send(
+            content, **kwargs
+        )  # whoooo all permission checks were passed
 
     async def send(self, content: str = None, **kwargs):
         """
@@ -94,9 +112,9 @@ class Context(commands.Context):
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
         ref = kwargs.pop("reference", None)
-        content = kwargs.pop("content", None)
-        for k in ['embed', 'embeds', 'content']:
-            kwargs.setdefault(k, None)
+        for k in ["embed", "embeds"]:
+            if not kwargs.get(k):
+                kwargs.setdefault(k, None)
         mid = self.message.id
 
         if no_save:
@@ -172,8 +190,8 @@ class ContextEditor:
 
     async def invoke(self, ctx: commands.Context):
         if ctx.command is not None:
-#            if not self.bot.msg_cache.get(ctx.message.id, None):
-#                await ctx.trigger_typing()
+            #            if not self.bot.msg_cache.get(ctx.message.id, None):
+            #                await ctx.trigger_typing()
             await self.bot_super.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):

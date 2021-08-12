@@ -30,11 +30,11 @@ class InvalidTimeFormat(commands.BadArgument):
 
 
 class Duration:
-    def __init__(self, original: str, seconds: int):
-        if not isinstance(seconds, int):
+    def __init__(self, original: str = "0", seconds: int = 0):
+        if not isinstance(seconds, int) or isinstance(seconds, str) and str.isdigit():
             raise TypeError("Seconds must be an integer!")
-        self._original = original
-        self._seconds = seconds
+        self._original = str(original)
+        self._seconds = int(seconds)
 
     def __str__(self):
         return self._original

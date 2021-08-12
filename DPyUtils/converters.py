@@ -21,8 +21,13 @@ from discord.ext.commands.converter import (
 from discord.ext.commands.converter import _utils_get, _get_from_guilds  # , TT, CT
 
 if not v2:
-    class Thread:...
+
+    class Thread:
+        ...
+
     d_thread = Thread
+else:
+    d_thread = discord.Thread
 if v2:
     from discord.ext.commands.converter import (
         TT,
@@ -31,9 +36,13 @@ if v2:
         ThreadConverter,
     )
 else:
-    from discord.ext.commands.converter import IDConverter as GuildChannelConverter, IDConverter as ThreadConverter
-    CT = TypeVar('CT', bound=discord.abc.GuildChannel)
-    TT = TypeVar('TT', bound=d_thread)
+    from discord.ext.commands.converter import (
+        IDConverter as GuildChannelConverter,
+        IDConverter as ThreadConverter,
+    )
+
+    CT = TypeVar("CT", bound=discord.abc.GuildChannel)
+    TT = TypeVar("TT", bound=d_thread)
 
 
 from discord.ext.commands.errors import (
@@ -51,6 +60,7 @@ from discord.ext.commands.errors import (
 if v2:
     from discord.ext.commands.errors import ThreadNotFound
 else:
+
     class ThreadNotFound(BadArgument):
         def __init__(self, argument):
             self.argument = argument
@@ -454,7 +464,7 @@ def get_all(bot, thing):
         setattr(bot, f"get_all_{thing}", _get_all)
 
 
-class GuildChannel(discord.abc.GuildChannel):
+class GuildChannel(GuildChannelConverter):
     @staticmethod
     async def _resolve_channel(
         ctx: commands.Context,
@@ -537,7 +547,7 @@ class GuildChannel(discord.abc.GuildChannel):
         return await result_handler(ctx, result, argument)
 
 
-class CategoryChannel(discord.CategoryChannel):
+class CategoryChannel(CategoryChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
@@ -546,7 +556,7 @@ class CategoryChannel(discord.CategoryChannel):
         )
 
 
-class TextChannel(discord.TextChannel):
+class TextChannel(TextChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
@@ -555,7 +565,7 @@ class TextChannel(discord.TextChannel):
         )
 
 
-class NewsChannel(discord.TextChannel):
+class NewsChannel(TextChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.TextChannel:
@@ -564,7 +574,7 @@ class NewsChannel(discord.TextChannel):
         )
 
 
-class VoiceChannel(discord.VoiceChannel):
+class VoiceChannel(VoiceChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.VoiceChannel:
@@ -573,7 +583,7 @@ class VoiceChannel(discord.VoiceChannel):
         )
 
 
-class StageChannel(discord.StageChannel):
+class StageChannel(StageChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.StageChannel:
@@ -581,13 +591,12 @@ class StageChannel(discord.StageChannel):
             ctx, argument, "stage_channels", discord.StageChannel
         )
 
-class Thread(d_thread):
+
+class Thread(ThreadConverter):
     async def convert(self, ctx: commands.Context, argument: str) -> d_thread:
         if not v2:
             raise commands.CheckFailure("Sorry, you can't use this until v2")
-        return await GuildChannel._resolve_thread(
-            ctx, argument, "threads", d_thread
-        )
+        return await GuildChannel._resolve_thread(ctx, argument, "threads", d_thread)
 
 
 class AnyChannelBase(commands.Converter):
@@ -595,12 +604,7 @@ class AnyChannelBase(commands.Converter):
 
     async def convert(self, ctx: commands.Context, argument, converters=[]):
         converters = converters or self.converters
-        if v2 and not all(
-            issubclass(c, commands.GuildChannelConverter) for c in converters
-        ):
-            raise TypeError(
-                "All converters must be a subclass of `commands.GuildChannelConverter`"
-            )
+        print(self.converters)
         result = None
         for converter in converters:
             if result:
