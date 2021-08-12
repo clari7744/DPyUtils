@@ -94,6 +94,7 @@ class Context(commands.Context):
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
         ref = kwargs.pop("reference", None)
+        content = kwargs.pop("content", None)
         for k in ['embed', 'embeds', 'content']:
             kwargs.setdefault(k, None)
         mid = self.message.id
