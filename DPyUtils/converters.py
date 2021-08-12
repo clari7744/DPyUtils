@@ -20,6 +20,9 @@ from discord.ext.commands.converter import (
 )
 from discord.ext.commands.converter import _utils_get, _get_from_guilds  # , TT, CT
 
+if not v2:
+    class Thread:...
+    d_thread = Thread
 if v2:
     from discord.ext.commands.converter import (
         TT,
@@ -30,7 +33,7 @@ if v2:
 else:
     from discord.ext.commands.converter import IDConverter as GuildChannelConverter, IDConverter as ThreadConverter
     CT = TypeVar('CT', bound=discord.abc.GuildChannel)
-    TT = TypeVar('TT', bound=discord.Thread)
+    TT = TypeVar('TT', bound=d_thread)
 
 
 from discord.ext.commands.errors import (
@@ -578,11 +581,12 @@ class StageChannel(discord.StageChannel):
             ctx, argument, "stage_channels", discord.StageChannel
         )
 
-
-class Thread(discord.Thread):
-    async def convert(self, ctx: commands.Context, argument: str) -> discord.Thread:
+class Thread(d_thread):
+    async def convert(self, ctx: commands.Context, argument: str) -> d_thread:
+        if not v2:
+            raise commands.CheckFailure("Sorry, you can't use this until v2")
         return await GuildChannel._resolve_thread(
-            ctx, argument, "threads", discord.Thread
+            ctx, argument, "threads", d_thread
         )
 
 
