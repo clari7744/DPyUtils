@@ -1,4 +1,5 @@
 # pylint: disable=import-error
+import discord
 from .bot import Bot
 from .converters import (
     GuildChannel,
@@ -35,5 +36,7 @@ from .duration import (
     parse as parse_duration,
     strfdur,
 )
-from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
+
+if discord.version_info >= (2, 0, 0):
+    from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
 from .utils import load_extensions, try_dm
