@@ -564,7 +564,7 @@ class NewsChannel(discord.TextChannel):
         )
 
 
-class VoiceChannel(discord.VoiceChannel()):
+class VoiceChannel(discord.VoiceChannel):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.VoiceChannel:
