@@ -1,7 +1,6 @@
 # pylint: disable=import-error
 from .bot import Bot
 from .converters import (
-    GuildChannel,
     CategoryChannel,
     TextChannel,
     NewsChannel,

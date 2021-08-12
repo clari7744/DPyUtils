@@ -50,7 +50,7 @@ async def try_dm(
         return await member.send(content, **kwargs)
     except:
         if (
-            fallback_ctx and not isinstance(ctx.channel, discord.DMChannel)
+            fallback_ctx and isinstance(ctx.channel, discord.DMChannel)
         ) or not fallback_ctx:
             return None
         return await ctx.send(content, **kwargs)

@@ -1,4 +1,4 @@
-import discord, asyncio, os
+import discord, asyncio, os, jishaku
 from discord.ext import commands
 
 
@@ -9,35 +9,34 @@ class Context(commands.Context):
         self.msg_cache_size = self.bot.msg_cache_size
 
     async def reaction_delete(self, msg: discord.Message, del_em):
-        if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):
-            del_em = "🗑️"
-        if not del_em:
+        if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"): # 
+            del_em = "🗑️" # If it's only a bool, then default to trash can unicode
+        if not del_em: # It wasn't enabled
             return
         if not isinstance(del_em, discord.Emoji):
             try:
-                del_em = int(del_em)
-                del_em = await self.bot.fetch_emoji(del_em)
+                del_em = await self.bot.fetch_emoji(int(del_em)) # Get a custom emoji by ID if possible
             except:
-                del_em = str(del_em)
+                del_em = str(del_em) # It's either unicode, full custom format `<a?:name:ID>`, or trash
         try:
-            await msg.add_reaction(del_em)
+            await msg.add_reaction(del_em) # Attempt to add the reaction
         except:
-            return
+            return # It failed, so do nothing 
         try:
             r, u = await self.bot.wait_for(
                 "reaction_add",
                 check=lambda r, u: str(r.emoji) == del_em
-                and u.id == self.author.id
+                and (u.id == self.author.id or r.message.channel.permissions_for(u).manage_messages)
                 and r.message.id == msg.id,
                 timeout=120,
-            )
+            ) # Wait for the author or a user with manage_messages to click the delete reaction
         except asyncio.TimeoutError:
-            await msg.remove_reaction(del_em, self.me)
+            await msg.remove_reaction(del_em, self.me) # They didn't click within two minutes, so delete the reaction
         else:
             try:
-                await msg.delete()
+                await msg.delete() # They *did* click the reaction, so attempt to delete the message
             except:
-                pass
+                pass # Weird things happen sometimes
 
     async def _send(self, content, **kwargs):
         perms: discord.Permissions = self.channel.permissions_for(self.me)
@@ -46,15 +45,15 @@ class Context(commands.Context):
             raise commands.CheckFailure(
                 "Cannot Send",
                 f"I don't have permission to {thing} in {self.channel.mention}!",
-            )
+            ) # A harmless error instead of icky 4xx
 
-        if not perms.send_messages:
+        if not perms.send_messages: # Most basic can't send that you'd think discord.py would handle
             error("send messages")
-        if kwargs.get("embed", kwargs.get("embeds", None)) and not perms.embed_links:
+        if kwargs.get("embed", kwargs.get("embeds", None)) and not perms.embed_links: # it's trying to send an embed without perms, so fail lol
             error("embed links")
-        if kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files:
+        if kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files: # same as embeds but files
             error("attach files")
-        return await super().send(content, **kwargs)
+        return await super().send(content, **kwargs) # whoooo all permission checks were passed
 
     async def send(self, content: str = None, **kwargs):
         """
@@ -88,58 +87,52 @@ class Context(commands.Context):
         :class:`~discord.Message`
             The message that was sent or edited.
         """
-        no_save = kwargs.pop("no_save", False)
-        no_edit = kwargs.pop("no_edit", False)
+        no_save, no_edit = [kwargs.pop(k, False) for k in ("no_save", "no_edit")]
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
         del_em = kwargs.pop(
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
-        kwargs.setdefault("embed", None)
+        ref = kwargs.pop("reference", None)
+        for k in ['embed', 'embeds', 'content']:
+            kwargs.setdefault(k, None)
+        mid = self.message.id
+
         if no_save:
             msg: discord.Message = await self._send(content, **kwargs)
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
             return msg
-        if self.message.id not in self.msg_cache:
+
+        if mid not in self.msg_cache:
             msg = await self._send(content, **kwargs)
-            self.msg_cache[self.message.id] = msg
+            self.msg_cache[mid] = msg
             if len(self.msg_cache) >= self.msg_cache_size:
                 self.bot.msg_cache = dict(
                     list(self.msg_cache.items())[1:]
                 )  # Janky way of capping the dict
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
             return msg
+
         if clear_invoke_react and self.channel.permissions_for(self.me).manage_messages:
             await self.message.clear_reactions()
-        ref = kwargs.pop("reference", None)
+        if clear_response_react:
+            await self.msg_cache[mid].clear_reactions()
         if no_edit:
-            self.msg_cache.pop(self.message.id, None)
+            self.msg_cache.pop(mid, None)
             return await self.send(content, **kwargs)
+
         try:
-            await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
-            if (
-                clear_response_react
-                and self.channel.permissions_for(self.me).manage_messages
-            ):
-                await self.msg_cache[self.message.id].clear_reactions()
+            await self.msg_cache[mid].edit(content=content, **kwargs)
         except:
-            self.msg_cache.pop(self.message.id, None)
+            self.msg_cache.pop(mid, None)
             return await self.send(content, **kwargs)
+
         try:
-            await self.msg_cache.get(self.message.id).edit(content=content, **kwargs)
-            if (
-                clear_response_react
-                and self.channel.permissions_for(self.me).manage_messages
-            ):
-                await self.msg_cache[self.message.id].clear_reactions()
-        except:
-            self.msg_cache.pop(self.message.id, None)
-            return await self.send(content, reference=ref, **kwargs)
-        try:
-            msg = await self.channel.fetch_message(self.msg_cache[self.message.id].id)
+            msg = await self.channel.fetch_message(self.msg_cache[mid].id)
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
         except:
             pass
+
         return msg
 
     async def reply(self, content: str = None, **kwargs):
@@ -178,8 +171,8 @@ class ContextEditor:
 
     async def invoke(self, ctx: commands.Context):
         if ctx.command is not None:
-            if not self.bot.msg_cache.get(ctx.message.id, None):
-                await ctx.trigger_typing()
+#            if not self.bot.msg_cache.get(ctx.message.id, None):
+#                await ctx.trigger_typing()
             await self.bot_super.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
