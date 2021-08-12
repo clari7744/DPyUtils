@@ -551,7 +551,7 @@ class CategoryChannel(CategoryChannelConverter):
     async def convert(
         self, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
-        return GuildChannel._resolve_channel(
+        return await GuildChannel._resolve_channel(
             ctx, argument, "categories", discord.CategoryChannel
         )
 
