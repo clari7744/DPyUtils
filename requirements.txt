@@ -1,7 +1,7 @@
-discord.py
-typing
 asyncio
+datetime
+discord.py
 DiscordUtils
 postbin
-datetime
+typing
 setuptools
