@@ -59,12 +59,11 @@ class Duration:
         """
         return self._seconds
 
-
-class DurationParser(commands.Converter):
     # TODO: Create a docstring for this class
-    async def convert(self, ctx, argument):
+    @classmethod
+    async def convert(cls, ctx, argument):
         try:
-            return Duration(argument, int(argument))
+            return cls(argument, int(argument))
         except:
             pass
         seconds = 0
@@ -73,7 +72,7 @@ class DurationParser(commands.Converter):
             raise InvalidTimeFormat(argument)
         for item in match:
             seconds += float(item[:-1]) * durations[item[-1]]
-        return Duration(argument, round(seconds))
+        return cls(argument, round(seconds))
 
 
 def parse(param: typing.Union[int, datetime.timedelta]):

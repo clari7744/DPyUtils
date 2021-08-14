@@ -249,14 +249,15 @@ async def check_bot(
     return result
 
 
-class Member(MemberConverter):
+class Member(MemberConverter, discord.Member):
     """
     Custom converter to allow for looser searching, inherits from commands.MemberConverter
     """
 
-    async def query_member_named(
-        self, guild: discord.Guild, argument, mem_type="EITHER"
-    ):
+    mem_type: Literal["EITHER", "MEMBER", "BOT"] = "EITHER"
+
+    @staticmethod
+    async def query_member_named(guild: discord.Guild, argument, mem_type="EITHER"):
         if not guild.chunked:
             await guild.chunk()
         result = None
@@ -277,11 +278,13 @@ class Member(MemberConverter):
             )
         return result
 
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument: str, *, mem_type="EITHER"
+        cls, ctx: commands.Context, argument: str  # , *, mem_type="EITHER"
     ) -> discord.Member:
         bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(
+        mem_type = cls.mem_type
+        match = IDConverter._get_id_match(argument) or re.match(
             r"<@!?([0-9]{15,20})>$", argument
         )
         guild = ctx.guild
@@ -314,9 +317,9 @@ class Member(MemberConverter):
             if guild is None:
                 raise MemberNotFound(argument)
             if user_id is not None:
-                result = await self.query_member_by_id(bot, guild, user_id)
+                result = await MemberConverter().query_member_by_id(bot, guild, user_id)
             else:
-                result = await self.query_member_named(guild, argument)
+                result = await cls.query_member_named(guild, argument)
             if not result:
                 raise MemberNotFound(argument)
         if isinstance(result, discord.Member):
@@ -325,33 +328,46 @@ class Member(MemberConverter):
 
 
 class BotMember(Member):
-    async def convert(self, ctx: commands.Context, argument):
-        return await super().convert(ctx, argument, mem_type="BOT")
+    mem_type = "BOT"
+
+
+#    @classmethod
+#    async def convert(cls, ctx: commands.Context, argument):
+#        return await Member.convert(ctx, argument, mem_type="BOT")
 
 
 class HumanMember(Member):
-    async def convert(self, ctx: commands.Context, argument):
-        return await super().convert(ctx, argument, mem_type="HUMAN")
+    mem_type = "HUMAN"
 
 
-class User(UserConverter):
+#    @classmethod
+#    async def convert(cls, ctx: commands.Context, argument):
+#        return await Member.convert(ctx, argument, mem_type="HUMAN")
+
+
+class User(UserConverter, discord.User):
     """
     Custom converter to allow for looser searching, inherits from commands.UserConverter
     """
 
+    mem_type: Literal["EITHER", "MEMBER", "BOT"] = "EITHER"
+
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument, *, mem_type="EITHER"
+        cls, ctx: commands.Context, argument  # , *, mem_type="EITHER"
     ) -> discord.User:
-        match = self._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
+        bot = ctx.bot
+        mem_type = cls.mem_type
+        match = cls._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
         result = None
         if match is not None:
             user_id = int(match.group(1))
-            result = ctx.bot.get_user(user_id) or _utils_get(
+            result = bot.get_user(user_id) or _utils_get(
                 ctx.message.mentions, id=user_id
             )
             if result is None:
                 try:
-                    result = await ctx.bot.fetch_user(user_id)
+                    result = await bot.fetch_user(user_id)
                 except discord.HTTPException:
                     raise UserNotFound(argument) from None
             return await check_bot(argument, result, "User", mem_type=mem_type)
@@ -366,7 +382,7 @@ class User(UserConverter):
             name = arg[:-5]  # pylint: disable=unused-variable
             result = search(
                 argument,
-                tuple(ctx.bot.users),
+                tuple(bot.users),
                 "name",
                 discrim=discrim,
                 mem_type=mem_type,
@@ -375,7 +391,7 @@ class User(UserConverter):
                 if isinstance(result, (discord.User, discord.ClientUser)):
                     return await check_bot(argument, result, "User", mem_type=mem_type)
                 return await result_handler(ctx, result, argument)
-        result = search(argument, tuple(ctx.bot.users), "name", mem_type=mem_type)
+        result = search(argument, tuple(bot.users), "name", mem_type=mem_type)
         if result is None:
             raise UserNotFound(argument)
         if isinstance(result, (discord.User, discord.ClientUser)):
@@ -384,25 +400,34 @@ class User(UserConverter):
 
 
 class BotUser(User):
-    async def convert(self, ctx: commands.Context, argument):
-        return await super().convert(ctx, argument, mem_type="BOT")
+    mem_type = "BOT"
+
+
+#    @classmethod
+#    async def convert(cls, ctx: commands.Context, argument):
+#        return await User.convert(ctx, argument, mem_type="BOT")
 
 
 class HumanUser(User):
-    async def convert(self, ctx: commands.Context, argument):
-        return await super().convert(ctx, argument, mem_type="HUMAN")
+    mem_type = "HUMAN"
 
 
-class Role(RoleConverter):
+#    @classmethod
+#    async def convert(cls, ctx: commands.Context, argument):
+#        return await User.convert(ctx, argument, mem_type="HUMAN")
+
+
+class Role(RoleConverter, discord.Role):
     """
     Custom converter to allow for looser searching, inherits from commands.RoleConverter
     """
 
-    async def convert(self, ctx: commands.Context, argument):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument):
         guild = ctx.guild
         if not guild:
             raise NoPrivateMessage()
-        match = self._get_id_match(argument) or re.match(r"<@&([0-9]+)>$", argument)
+        match = cls._get_id_match(argument) or re.match(r"<@&([0-9]+)>$", argument)
         if match:
             result = guild.get_role(int(match.group(1)))
         else:
@@ -414,8 +439,9 @@ class Role(RoleConverter):
         return await result_handler(ctx, result, argument)
 
 
-class Color(ColorConverter):
-    async def convert(self, ctx: commands.Context, argument):
+class Color(ColorConverter, discord.Color):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument):
         try:
             int_arg = int(argument)
             return discord.Color(int_arg)
@@ -547,53 +573,57 @@ class GuildChannel(GuildChannelConverter):
         return await result_handler(ctx, result, argument)
 
 
-class CategoryChannel(CategoryChannelConverter):
+class CategoryChannel(CategoryChannelConverter, discord.CategoryChannel):
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument: str
+        cls, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
         return await GuildChannel._resolve_channel(
             ctx, argument, "categories", discord.CategoryChannel
         )
 
 
-class TextChannel(TextChannelConverter):
+class TextChannel(TextChannelConverter, discord.TextChannel):
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument: str
+        cls, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
         return await GuildChannel._resolve_channel(
             ctx, argument, "text_channel", discord.TextChannel
         )
 
 
-class NewsChannel(TextChannelConverter):
-    async def convert(
-        self, ctx: commands.Context, argument: str
-    ) -> discord.TextChannel:
+class NewsChannel(TextChannelConverter, discord.TextChannel):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument: str) -> discord.TextChannel:
         return await GuildChannel._resolve_channel(
             ctx, argument, "text_channel", discord.TextChannel, news=True
         )
 
 
-class VoiceChannel(VoiceChannelConverter):
+class VoiceChannel(VoiceChannelConverter, discord.VoiceChannel):
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument: str
+        cls, ctx: commands.Context, argument: str
     ) -> discord.VoiceChannel:
         return await GuildChannel._resolve_channel(
             ctx, argument, "voice_channels", discord.VoiceChannel
         )
 
 
-class StageChannel(StageChannelConverter):
+class StageChannel(StageChannelConverter, discord.StageChannel):
+    @classmethod
     async def convert(
-        self, ctx: commands.Context, argument: str
+        cls, ctx: commands.Context, argument: str
     ) -> discord.StageChannel:
         return await GuildChannel._resolve_channel(
             ctx, argument, "stage_channels", discord.StageChannel
         )
 
 
-class Thread(ThreadConverter):
-    async def convert(self, ctx: commands.Context, argument: str) -> d_thread:
+class Thread(ThreadConverter, d_thread):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument: str) -> d_thread:
         if not v2:
             raise commands.CheckFailure("Sorry, you can't use this until v2")
         return await GuildChannel._resolve_thread(ctx, argument, "threads", d_thread)
@@ -602,9 +632,10 @@ class Thread(ThreadConverter):
 class AnyChannelBase(commands.Converter):
     converters: list
 
-    async def convert(self, ctx: commands.Context, argument, converters=[]):
-        converters = converters or self.converters
-        print(self.converters)
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument, converters=[]):
+        converters = converters or cls.converters
+        print(cls.converters)
         result = None
         for converter in converters:
             if result:
@@ -645,9 +676,10 @@ class IgnoreCaseLiteral(commands.Converter):
         return argument
 
 
-class Permissions(commands.Converter):
-    def convert(self, ctx: commands.Context, argument):
-        if argument.isdigit():
+class Permissions(commands.Converter, discord.Permissions):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument) -> discord.Permissions:
+        if argument.isdigit() and int(argument) < discord.Permissions.all().value:
             return discord.Permissions(int(argument))
         perms = argument.replace("server", "guild").lower().split()
         perm = discord.Permissions()
