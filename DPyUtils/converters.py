@@ -589,7 +589,7 @@ class TextChannel(TextChannelConverter, discord.TextChannel):
         cls, ctx: commands.Context, argument: str
     ) -> discord.CategoryChannel:
         return await GuildChannel._resolve_channel(
-            ctx, argument, "text_channel", discord.TextChannel
+            ctx, argument, "text_channels", discord.TextChannel
         )
 
 
@@ -597,7 +597,7 @@ class NewsChannel(TextChannelConverter, discord.TextChannel):
     @classmethod
     async def convert(cls, ctx: commands.Context, argument: str) -> discord.TextChannel:
         return await GuildChannel._resolve_channel(
-            ctx, argument, "text_channel", discord.TextChannel, news=True
+            ctx, argument, "text_channels", discord.TextChannel, news=True
         )
 
 
