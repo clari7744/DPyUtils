@@ -117,13 +117,11 @@ class Context(commands.Context):
         mid = self.message.id
 
         if no_save:
-            print("no save")
             msg: discord.Message = await self._send(content, **kwargs)
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
             return msg
 
         if mid not in self.msg_cache:
-            print("msg not in cache")
             msg = await self._send(content, **kwargs)
             self.msg_cache[mid] = msg
             if len(self.msg_cache) >= self.msg_cache_size:
@@ -134,40 +132,29 @@ class Context(commands.Context):
             return msg
 
         if no_edit:
-            print("no edit")
             self.msg_cache.pop(mid, None)
             return await self.send(content, **kwargs)
 
         if self.channel.permissions_for(self.me).manage_messages:
-            print("has manage_messages")
             if clear_invoke_react:
-                print("clear invoke")
                 await self.message.clear_reactions()
             if clear_response_react:
-                print("clear resp")
-                await self.msg_cache[mid].clear_reactions()
+                try:
+                    await self.msg_cache[mid].clear_reactions()
+                except:
+                    pass
 
         try:
-            print("trying edit")
-            print("message", repr(self.msg_cache[mid]))
             await self.msg_cache[mid].edit(content=content, **kwargs)
-        except Exception as e:
-            print("fallback to send")
-            print(
-                "error:",
-                "".join(traceback.format_exception(type(e), e, e.__traceback__)),
-            )
-            print("pop", self.msg_cache.pop(mid, None))
+        except discord.NotFound:
+            self.msg_cache.pop(mid, None)
             return await self.send(content, **kwargs)
 
         try:
-            print("trying to fetch message for create_task(reaction_delete)")
             msg = await self.channel.fetch_message(self.msg_cache[mid].id)
             self.bot.loop.create_task(self.reaction_delete(msg, del_em))
         except:
-            print("it failed")
             pass
-        print("eof")
         return msg
 
     async def reply(self, content: str = None, **kwargs):
