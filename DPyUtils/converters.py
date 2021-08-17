@@ -139,7 +139,7 @@ def search(
         ):
             if discrim:
                 result = [x for x in result if x.discriminator == discrim]
-            if mem_type in ["BOT", "HUMAN"]:
+            if mem_type in ["BOT", "HUMAN", "EITHER"]:
                 if mem_type == "BOT":
                     result = [x for x in result if x.bot]
                 elif mem_type == "HUMAN":
@@ -173,6 +173,8 @@ async def result_handler(ctx: commands.Context, result, argument):
     if not hasattr(ctx.bot, "converters_original_on_command_error"):
         ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
+    if not isinstance(result, Iterable):
+        result = [result]
     if len(result) == 1:
         return result[0]
     if len(result) < 1:
@@ -635,7 +637,6 @@ class AnyChannelBase(commands.Converter):
     @classmethod
     async def convert(cls, ctx: commands.Context, argument, converters=[]):
         converters = converters or cls.converters
-        print(cls.converters)
         result = None
         for converter in converters:
             if result:

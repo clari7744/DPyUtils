@@ -69,9 +69,18 @@ class Context(commands.Context):
             kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files
         ):  # same as embeds but files
             error("attach files")
-        return await super().send(
-            content, **kwargs
-        )  # whoooo all permission checks were passed
+        if kwargs.get("reference", None):
+            try:
+                return await super().send(
+                    content, **kwargs
+                )  # whoooo all permission checks were passed
+            except discord.HTTPException as e:
+                if "message_reference" in str(e):
+                    kwargs.pop("reference")
+                    return await super().send(content, **kwargs)
+                else:
+                    raise e
+        return await super().send(content, **kwargs)
 
     async def send(self, content: str = None, **kwargs):
         """
@@ -105,15 +114,15 @@ class Context(commands.Context):
         :class:`~discord.Message`
             The message that was sent or edited.
         """
-        print("content", str(content), "kwargs", kwargs)
         no_save, no_edit = [kwargs.pop(k, False) for k in ("no_save", "no_edit")]
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
         del_em = kwargs.pop(
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
-        ref = kwargs.pop("reference", None)
         kwargs.setdefault("embed", None)
+        if any(k in kwargs for k in ("file", "files")):
+            no_edit = True
         mid = self.message.id
 
         if no_save:
