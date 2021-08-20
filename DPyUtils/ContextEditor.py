@@ -27,7 +27,7 @@ class Context(commands.Context):
         except:
             return  # It failed, so do nothing
         try:
-            r, u = await self.bot.wait_for(
+            await self.bot.wait_for(
                 "reaction_add",
                 check=lambda r, u: str(r.emoji) == del_em
                 and not u.bot
@@ -154,6 +154,7 @@ class Context(commands.Context):
                     pass
 
         try:
+            kwargs.pop("reference", None)
             await self.msg_cache[mid].edit(content=content, **kwargs)
         except discord.NotFound:
             self.msg_cache.pop(mid, None)
@@ -250,7 +251,7 @@ def teardown(bot: commands.Bot):
     bot_super = super(bot.__class__, bot)
     get_l = lambda l: discord.utils.find(
         lambda e: e.__self__.__class__.__name__ == "ContextEditor",
-        extra_events["on_raw_message_" + l],
+        bot.extra_events["on_raw_message_" + l],
     )
     bot.remove_listener(get_l("edit"))
     bot.remove_listener(get_l("delete"))
