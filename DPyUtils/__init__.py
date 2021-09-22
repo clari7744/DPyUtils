@@ -28,7 +28,12 @@ from .converters import (
 )
 from .converters import IgnoreCaseLiteral, Permissions
 from .checks import check_hierarchy, is_guild_owner
-from .ContextEditor import Context
+from .commands import command, Command
+
+if discord.version_info >= (2, 0, 0):
+    from .ContextEditor2 import Context
+else:
+    from .ContextEditor import Context
 from .duration import (
     Duration,
     ParsedDuration,
@@ -38,4 +43,4 @@ from .duration import (
 
 if discord.version_info >= (2, 0, 0):
     from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
-from .utils import load_extensions, try_dm
+from .utils import load_extensions, try_dm, s

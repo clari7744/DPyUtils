@@ -1,7 +1,12 @@
-import discord
+import discord, re
 from discord.ext import commands
+
+if not discord.version_info >= (2, 0, 0):
+    raise TypeError("Sorry, this can only be used in v2")
 from dataclasses import dataclass
 from discord.utils import MISSING
+
+
 from typing import Any, Dict, List, Optional
 
 
@@ -36,11 +41,14 @@ class Flag(commands.Flag):
         A negative value indicates an unlimited amount of arguments.
     override: :class:`bool`
         Whether multiple given values overrides the previous value.
-    switch: :class:`str`
+    switch: :class:`bool`
         Whether flag will accept an argument or not. Defaults to true, if false then will raise an error if an argument is passed.
+    description: :class:`str`
+        A meta flag description, used in signatures.
     """
 
     switch: bool = False
+    description: str = None
 
 
 def flag(
@@ -51,6 +59,8 @@ def flag(
     max_args: int = MISSING,
     override: bool = MISSING,
     switch: bool = False,
+    description: str = None,
+    annotation: Any = MISSING,
 ) -> Any:
     """Override default functionality and parameters of the underlying :class:`FlagConverter`
     class attributes.
@@ -74,6 +84,10 @@ def flag(
         value depends on the annotation given.
     switch: :class:`str`
         Whether flag will accept an argument or not. Defaults to true, if false then will raise an error if an argument is passed.
+    description: :class:`str`
+        A meta flag description, used in signatures.
+    annotation: Any
+        The underlying evaluated annotation of the flag.
     """
     if switch and default is MISSING:
         default = False
@@ -84,6 +98,8 @@ def flag(
         max_args=max_args,
         override=override,
         switch=switch,
+        description=description,
+        annotation=annotation,
     )
 
 
@@ -94,28 +110,32 @@ class FlagConverter(
     prefix="-",
     delimiter=" ",
 ):
-    __commands_flag_prefix__ = "-"
-    __commands_flag_delimiter__ = " "
-
     def _switch(flag: Flag):
         return getattr(flag, "switch", False) and flag.annotation == bool
 
     @classmethod
     def parse_flags(cls, argument: str) -> Dict[str, List[str]]:
+        # pylint: disable=no-member;
         result: Dict[str, List[str]] = {}
-        flags = cls.__commands_flags__  # pylint: disable=no-member
-        aliases = cls.__commands_flag_aliases__  # pylint: disable=no-member
-        prefix = cls.__commands_flag_prefix__  # pylint: disable=no-member
-        delim = cls.__commands_flag_delimiter__  # pylint: disable=no-member
+        flags = cls.__commands_flags__
+        aliases = cls.__commands_flag_aliases__
+        prefix = cls.__commands_flag_prefix__
+        delim = cls.__commands_flag_delimiter__
         last_position = 0
         last_flag: Optional[Flag] = None
 
-        case_insensitive = (
-            cls.__commands_flag_case_insensitive__
-        )  # pylint: disable=no-member
-        for match in cls.__commands_flag_regex__.finditer(
-            argument
-        ):  # pylint: disable=no-member
+        case_insensitive = cls.__commands_flag_case_insensitive__
+        prereg = cls.__commands_flag_regex__
+        if delim == " ":
+            regex = cls.__commands_flag_regex__ = re.compile(
+                prereg.pattern.replace(
+                    f"){re.escape(delim)})", f")({re.escape(delim)}|\Z))"
+                ),
+                prereg.flags,
+            )
+        else:
+            regex = prereg
+        for match in regex.finditer(argument):
             begin, end = match.span(0)
             key = match.group("flag")
             if case_insensitive:
@@ -163,7 +183,7 @@ class FlagConverter(
                 return result
 
             if not value:
-                raise MissingFlagArgument(last_flag)
+                raise commands.MissingFlagArgument(last_flag)
             try:
                 values = result[last_flag.name]
             except KeyError:
@@ -174,26 +194,14 @@ class FlagConverter(
         # Verification of values will come at a later stage
         return result
 
-
-class Command(commands.Command):
-    def __init__(self, func, **kwargs):
-        super().__init__(func, **kwargs)
-        self.flags = kwargs.get("flags", getattr(func, "__flags__", None))
-
-
-def command(name=None, cls=None, **attrs):
-    if cls is None:
-        cls = Command
-
-    def decorator(func):
-        if isinstance(func, Command):
-            raise TypeError("Callback is already a command.")
-        return cls(func, name=name, **attrs)
-
-    return decorator
-
-
-commands.command = command
+    def get_flag_signature(self):
+        flags = list(self.get_flags().values())
+        prefix = self.__commands_flag_prefix__
+        delim = self.__commands_flag_delimiter__
+        return "\n".join(
+            f"`{prefix}[{'|'.join((flag.name,*flag.aliases))}]{delim}{flag.annotation.__name__ if not getattr(flag, 'switch', None) else 'Switch'}={flag.default}]`{f' | {flag.description}' if getattr(flag, 'description', None) else ''}"
+            for flag in flags
+        )
 
 
 def flags(flags: commands.FlagConverter):
@@ -208,3 +216,9 @@ def flags(flags: commands.FlagConverter):
         return func
 
     return deco
+
+
+def get_flag_signature(flagclass: FlagConverter):
+    if not issubclass(flagclass, FlagConverter):
+        raise TypeError(f"{flagclass} must be a subclass of `DPyUtils.FlagConverter`.")
+    return flagclass.get_flag_signature()

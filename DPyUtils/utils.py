@@ -4,23 +4,24 @@
 # - params: bot,check=None,timeout=None,*,yes='✅',no='❌'
 # wait_for_reaction_or_message
 
-import discord, typing, os, traceback
+import discord, os, traceback
 from discord.ext import commands
+from typing import Union, List, Iterable
 
 
 def load_extensions(
     bot: commands.Bot,
     *,
-    directories: typing.List = ["cogs"],
-    extra_cogs: typing.List = [],
-    skip: typing.List = [],
+    directories: List = ["cogs"],
+    extra_cogs: List = [],
+    skip: List = [],
 ):
     extensions = [*extra_cogs]
     directories = [*directories]
     for _dir in directories:
         for file in os.listdir(_dir):
             if file.endswith(".py") and not file.startswith("__"):
-                extensions.append(f"{_dir}.{file[:-3]}")
+                extensions.append(f"{_dir.replace('/', '.')}.{file[:-3]}")
     print(f"Extensions to attempt to load: {', '.join(extensions)}")
     extensions = [e for e in extensions if e not in skip]
     for e in extensions:
@@ -38,7 +39,7 @@ def load_extensions(
 
 async def try_dm(
     ctx: commands.Context,
-    member: typing.Union[discord.User, discord.Member],
+    member: Union[discord.User, discord.Member],
     content=None,
     *,
     fallback_ctx: bool = False,
@@ -54,3 +55,8 @@ async def try_dm(
         ) or not fallback_ctx:
             return None
         return await ctx.send(content, **kwargs)
+
+
+def s(value: Union[Iterable, int]):
+    num = value if isinstance(value, int) else len(value)
+    return "s" if num != 1 else ""

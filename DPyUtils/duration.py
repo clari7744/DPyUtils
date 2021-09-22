@@ -1,5 +1,6 @@
 import discord, re, typing, collections, datetime
 from discord.ext import commands
+from .utils import s
 
 
 ParsedDuration = collections.namedtuple(
@@ -31,8 +32,10 @@ class InvalidTimeFormat(commands.BadArgument):
 
 class Duration:
     def __init__(self, original: str = "0", seconds: int = 0):
-        if not isinstance(seconds, int) or isinstance(seconds, str) and str.isdigit():
-            raise TypeError("Seconds must be an integer!")
+        try:
+            seconds = int(seconds)
+        except:
+            raise TypeError("Seconds must be an integer.")
         self._original = str(original)
         self._seconds = int(seconds)
 
@@ -41,6 +44,9 @@ class Duration:
 
     def __int__(self):
         return self._seconds
+
+    def __bool__(self):
+        return bool(self._seconds)
 
     def __iter__(self):
         yield from (self._original, self._seconds)
@@ -67,7 +73,9 @@ class Duration:
         except:
             pass
         seconds = 0
-        match = re.findall("([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument)
+        match = re.findall(
+            "([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument
+        )  # pylint: disable=anomalous-backslash-in-string
         if not match:
             raise InvalidTimeFormat(argument)
         for item in match:
@@ -106,11 +114,12 @@ def strfdur(param: typing.Union[int, datetime.timedelta, ParsedDuration]):
         for incr in ["year", "week", "day", "hour", "minute", "second"]
     }
     times = [(x[0], int(x[1])) for x in dict_times.items() if x[1]]
+
+    def _fmt(t):
+        return f"{t[1]} {t[0]}" + s(t[1])
+
     if len(times) > 2:
-        fmt = "{}, and {}".format(
-            ", ".join(f"{t[1]} {t[0]}{'s' if t[1] != 1 else ''}" for t in times[:-1]),
-            f"{times[-1][1]} {times[-1][0]}{'s' if times[-1][0] != 1 else ''}",
-        )
+        fmt = f"{', '.join(_fmt(t) for t in times[:-1])}, and {_fmt(times[-1])}"
     else:
-        fmt = " and ".join(f"{t[1]} {t[0]}{'s' if t[1] != 1 else ''}" for t in times)
+        fmt = " and ".join(_fmt(t) for t in times)
     return fmt

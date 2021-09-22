@@ -4,6 +4,8 @@ from discord.ext import commands
 
 class Bot(commands.Bot):
     def __init__(self, *args, **options):
+
+        _typing = options.pop("type_on_command", False)
         options.setdefault("strip_after_prefix", True)
         options.setdefault(
             "allowed_mentions",
@@ -18,6 +20,7 @@ class Bot(commands.Bot):
         self._BotBase__cogs = commands.core._CaseInsensitiveDict()
         self.start_time = datetime.datetime.now()
         self.utc_start_time = discord.utils.utcnow()
+        self._type_on_command = _typing
 
     @classmethod
     def inspect(cls, obj, lines: bool = 0):
