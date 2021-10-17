@@ -17,6 +17,7 @@ from discord.ext.commands.converter import (
     StageChannelConverter,
     ColorConverter,
     EmojiConverter,
+    MessageConverter,
 )
 from discord.ext.commands.converter import _utils_get, _get_from_guilds  # , TT, CT
 
@@ -664,6 +665,12 @@ class NonCategoryChannel(AnyChannelBase):
     converters = [TextChannel, VoiceChannel, StageChannel, Thread]
 
 
+class Message(MessageConverter):
+    @classmethod
+    async def convert(cls, ctx: commands.Context, argument):
+        await cls().convert(ctx, argument.strip("<>"))
+
+
 class IgnoreCaseLiteral(commands.Converter):
     def __class_getitem__(self, *parameters):
         self.parameters = tuple(str(param).lower() for param in parameters)
@@ -690,3 +697,15 @@ class Permissions(commands.Converter, discord.Permissions):
             except:
                 raise InvalidPermission(p)
         return perm
+
+
+if opts := getattr(commands.core, "application_option_channel_types"):
+    opts.update(
+        {
+            TextChannel: opts[discord.TextChannel],
+            VoiceChannel: opts[discord.VoiceChannel],
+            StageChannel: opts[discord.StageChannel],
+            CategoryChannel: opts[discord.CategoryChannel],
+            Thread: opts[discord.Thread],
+        }
+    )
