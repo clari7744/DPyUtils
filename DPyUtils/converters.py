@@ -215,8 +215,8 @@ async def result_handler(ctx: commands.Context, result, argument):
         raise KillCommand(f"Canceled command due to timeout.")
     finally:
         try:
-            await msg.delete()
             await todel.delete()
+            await msg.delete()
         except:
             pass
     if msg.content.lower() in ["cancel"]:
@@ -445,6 +445,7 @@ class Role(RoleConverter, discord.Role):
 class Color(ColorConverter, discord.Color):
     @classmethod
     async def convert(cls, ctx: commands.Context, argument):
+        self = ColorConverter()
         try:
             int_arg = int(argument)
             return discord.Color(int_arg)
@@ -697,15 +698,3 @@ class Permissions(commands.Converter, discord.Permissions):
             except:
                 raise InvalidPermission(p)
         return perm
-
-
-if opts := getattr(commands.core, "application_option_channel_types"):
-    opts.update(
-        {
-            TextChannel: opts[discord.TextChannel],
-            VoiceChannel: opts[discord.VoiceChannel],
-            StageChannel: opts[discord.StageChannel],
-            CategoryChannel: opts[discord.CategoryChannel],
-            Thread: opts[discord.Thread],
-        }
-    )

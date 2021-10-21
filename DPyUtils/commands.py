@@ -10,7 +10,11 @@ class Command(commands.Command):
         super().__init__(func, **kwargs)
 
     async def invoke(self, ctx: commands.Context):
-        if self.trigger_typing is False or not ctx.bot._type_on_command:
+        if (
+            self.trigger_typing is False
+            or not ctx.bot._type_on_command
+            or not ctx.channel.permissions_for(ctx.me).send_messages
+        ):
             pass
         elif ctx.bot._type_on_command or self.trigger_typing is True:
             await ctx.trigger_typing()

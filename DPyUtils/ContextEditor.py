@@ -1,5 +1,6 @@
-import discord, asyncio, os, jishaku, traceback
+import discord, asyncio, os
 from discord.ext import commands
+from typing import Union
 
 
 class Context(commands.Context):
@@ -114,21 +115,27 @@ class Context(commands.Context):
         :class:`~discord.Message`
             The message that was sent or edited.
         """
+        msg, del_em, use_react = await self._do_send(content, **kwargs)
+        if not use_react:
+            return msg
+        self.bot.loop.create_task(self.reaction_delete(msg, del_em))
+        return msg
+
+    async def _do_send(self, content: str = None, **kwargs):
         no_save, no_edit = [kwargs.pop(k, False) for k in ("no_save", "no_edit")]
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
         del_em = kwargs.pop(
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
+        use_react = kwargs.pop("use_react", True)
         kwargs.setdefault("embed", None)
-        if any(k in kwargs for k in ("file", "files")):
+        if any(k in kwargs for k in ("file", "files", "ephemeral")):
             no_edit = True
         mid = self.message.id
 
         if no_save:
-            msg: discord.Message = await self._send(content, **kwargs)
-            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
-            return msg
+            return await self._send(content, **kwargs), del_em, use_react
 
         if mid not in self.msg_cache:
             msg = await self._send(content, **kwargs)
@@ -136,17 +143,19 @@ class Context(commands.Context):
             if len(self.msg_cache) >= self.msg_cache_size:
                 self.bot.msg_cache = dict(
                     list(self.msg_cache.items())[1:]
-                )  # Janky way of capping the dict
-            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
-            return msg
+                )  # Janky way of capping the dict=
+            return msg, del_em, use_react
 
         if no_edit:
             self.msg_cache.pop(mid, None)
-            return await self.send(content, **kwargs)
+            return await self._do_send(content, **kwargs)
 
         if self.channel.permissions_for(self.me).manage_messages:
             if clear_invoke_react:
-                await self.message.clear_reactions()
+                try:
+                    await self.message.clear_reactions()
+                except:
+                    pass
             if clear_response_react:
                 try:
                     await self.msg_cache[mid].clear_reactions()
@@ -158,27 +167,27 @@ class Context(commands.Context):
             await self.msg_cache[mid].edit(content=content, **kwargs)
         except discord.NotFound:
             self.msg_cache.pop(mid, None)
-            return await self.send(content, **kwargs)
+            return await self._do_send(content, **kwargs)
 
         try:
             msg = await self.channel.fetch_message(self.msg_cache[mid].id)
-            self.bot.loop.create_task(self.reaction_delete(msg, del_em))
         except:
-            pass
-        return msg
+            msg = None
+        return msg, del_em, use_react
 
     async def reply(self, content: str = None, **kwargs):
         return await self.send(content, reference=self.message, **kwargs)
 
 
 class ContextEditor:
-    def __init__(self, bot: commands.Bot, **kwargs):
+    def __init__(self, bot: commands.Bot, context: Context, **kwargs):
         # TODO Format this better later
         """
         Options:
         `del_em` The emoji used for bot.msg_del_emoji
         msg_cache_size :class:`int` The maximum size allowed for the cache before it starts removing messages.
         """
+        self.Context = context
         self.bot = bot
         self.bot_super = super(bot.__class__, self.bot)
 
@@ -186,6 +195,7 @@ class ContextEditor:
         bot.msg_cache_size = kwargs.pop("msg_cache_size", 500)
         bot.msg_del_emoji = kwargs.pop("del_em", os.getenv("CTX_DELETE_EMOJI", None))
         bot.get_del_emoji = self.get_del_emoji
+        bot.make_emoji = self.make_emoji
 
         bot.get_context = self.get_context
         bot.process_commands = self.process_commands
@@ -194,11 +204,11 @@ class ContextEditor:
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
 
-    async def get_context(self, message: discord.Message, *, cls=Context):
-        return await self.bot_super.get_context(message, cls=cls)
+    async def get_context(self, message: discord.Message, *, cls=None):
+        return await self.bot_super.get_context(message, cls=cls or self.Context)
 
     async def process_commands(self, message: discord.Message):
-        ctx = await self.bot.get_context(message, cls=Context)
+        ctx = await self.bot.get_context(message, cls=self.Context)
         await self.bot.invoke(ctx)
 
     async def invoke(self, ctx: commands.Context):
@@ -242,9 +252,33 @@ class ContextEditor:
         """
         return bot.msg_del_emoji
 
+    async def make_emoji(
+        self,
+        bot: commands.Bot,
+        emoji: Union[discord.Emoji, discord.PartialEmoji, int, str],
+        *,
+        allow_partial: bool = False,
+    ):
+        if str(emoji).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):
+            emoji = "🗑️"  # If it's only a bool, then default to trash can unicode
+        if not emoji:  # It wasn't enabled
+            return None
+        if isinstance(emoji, discord.Emoji):
+            return emoji
+        if emoji.isdigit():
+            try:
+                emoji = await bot.fetch_emoji(
+                    int(emoji)
+                )  # Get a custom emoji by ID if possible
+            except:
+                emoji = (int if allow_partial else str)(emoji)
+        else:
+            emoji = str(emoji)
+        return emoji
+
 
 def setup(bot: commands.Bot):
-    ContextEditor(bot)
+    ContextEditor(bot, Context)
 
 
 def teardown(bot: commands.Bot):
@@ -261,4 +295,4 @@ def teardown(bot: commands.Bot):
     bot.invoke = bot_super.invoke
 
     del bot.msg_cache, bot.msg_cache_size
-    del bot.msg_del_emoji, bot.get_del_emoji
+    del bot.msg_del_emoji, bot.get_del_emoji, bot.make_emoji

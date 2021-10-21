@@ -52,14 +52,14 @@ class Duration:
         yield from (self._original, self._seconds)
 
     @property
-    def original(self):
+    def original(self) -> str:
         """
         Returns the original argument passed to the duration converter.
         """
         return self._original
 
     @property
-    def seconds(self):
+    def seconds(self) -> int:
         """
         Returns the amount of seconds that the duration passed in was converted to.
         """
@@ -83,7 +83,7 @@ class Duration:
         return cls(argument, round(seconds))
 
 
-def parse(param: typing.Union[int, datetime.timedelta]):
+def parse(param: typing.Union[int, datetime.timedelta]) -> ParsedDuration:
     """
     This function takes an int or timedelta parameter of seconds and formats it, returning a named tuple ParsedDuration that has years, weeks, days, hours, minutes and seconds. It also includes the total_seconds, the input.
     """
@@ -94,6 +94,7 @@ def parse(param: typing.Union[int, datetime.timedelta]):
     ts = int(seconds)
     for unit, sec in durations.items():
         parsed[unit], seconds = divmod(seconds, sec)
+        parsed[unit] = int(parsed[unit])
     return ParsedDuration(
         years=parsed["y"],
         weeks=parsed["w"],
@@ -105,7 +106,12 @@ def parse(param: typing.Union[int, datetime.timedelta]):
     )
 
 
-def strfdur(param: typing.Union[int, datetime.timedelta, ParsedDuration]):
+def strfdur(
+    param: typing.Union[int, datetime.timedelta, ParsedDuration],
+    *,
+    compact: bool = False,
+    letter: bool = False,
+) -> str:
     dur: ParsedDuration = (
         parse(param) if not isinstance(param, ParsedDuration) else param
     )
@@ -113,13 +119,33 @@ def strfdur(param: typing.Union[int, datetime.timedelta, ParsedDuration]):
         incr: getattr(dur, incr + "s")
         for incr in ["year", "week", "day", "hour", "minute", "second"]
     }
-    times = [(x[0], int(x[1])) for x in dict_times.items() if x[1]]
+    times = [
+        (k, int(v))
+        for k, v in dict_times.items()
+        if v or (k not in ("year", "week") and compact)
+    ]
 
-    def _fmt(t):
-        return f"{t[1]} {t[0]}" + s(t[1])
+    def _fmt(unit, val):
+        if compact:
+            return str(val).zfill(2)
+        if letter:
+            return f"{val}{unit[0]}"
+        return f"{val} {unit}{s(val)}"
 
-    if len(times) > 2:
-        fmt = f"{', '.join(_fmt(t) for t in times[:-1])}, and {_fmt(times[-1])}"
+    if compact:
+        if any(t[0] in ("year", "week") for t in times):
+            raise TypeError("Compact cannot be used with times greater than 7 days")
+        for i, t in enumerate(times):
+            if not t[1]:
+                continue
+            times = times[i:]
+            break
+        if len(times) == 1 and times[0][0] == "second":
+            fmt = f":{_fmt(*times[0])}"
+        else:
+            fmt = ":".join(_fmt(*t) for t in times)
+    elif len(times) > 2:
+        fmt = f"{', '.join(_fmt(*t) for t in times[:-1])}, and {_fmt(*times[-1])}"
     else:
-        fmt = " and ".join(_fmt(t) for t in times)
+        fmt = " and ".join(_fmt(*t) for t in times)
     return fmt

@@ -42,5 +42,6 @@ from .utils import load_extensions, try_dm, s
 if discord.version_info >= (2, 0, 0):
     from .ContextEditor2 import Context
     from ._flags import Flag, flag, FlagConverter, FlagIsSwitch, flags
+    from .views import Confirmation
 else:
     from .ContextEditor import Context
