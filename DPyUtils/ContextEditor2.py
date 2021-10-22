@@ -38,7 +38,7 @@ class Context(OldContext):
         kwargs.update(view=view, use_react=use_react)
         return kwargs
 
-    @discord.utils.copy_doc(Context.send)
+    @discord.utils.copy_doc(OldContext.send)
     async def send(self, content: str = None, **kwargs):
         return await super().send(content, **(await self.add_del_button(kwargs)))
 
