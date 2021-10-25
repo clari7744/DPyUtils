@@ -13,11 +13,12 @@ def load_extensions(
     bot: commands.Bot,
     *,
     directories: List = ["cogs"],
-    extra_cogs: List = [],
-    skip: List = [],
+    extra_cogs: List = None,
+    skip: List = None,
 ):
-    extensions = [*extra_cogs]
+    extensions = [*(extra_cogs or [])]
     directories = [*directories]
+    skip = skip or []
     for _dir in directories:
         for file in os.listdir(_dir):
             if file.endswith(".py") and not file.startswith("__"):
@@ -60,3 +61,11 @@ async def try_dm(
 def s(value: Union[Iterable, int]):
     num = value if isinstance(value, int) else len(value)
     return "s" if num != 1 else ""
+
+
+def _and(*args):
+    if len(args) > 2:
+        fmt = f"{', '.join(args[:-1])}, and {args[-1]}"
+    else:
+        fmt = " and ".join(args)
+    return fmt

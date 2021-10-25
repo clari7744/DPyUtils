@@ -1,6 +1,6 @@
-import discord, re, typing, collections, datetime
+import re, typing, collections, datetime
 from discord.ext import commands
-from .utils import s
+from .utils import s, _and  # pylint: disable=relative-beyond-top-level
 
 
 ParsedDuration = collections.namedtuple(
@@ -35,7 +35,9 @@ class Duration:
         try:
             seconds = int(seconds)
         except:
-            raise TypeError("Seconds must be an integer.")
+            raise TypeError(
+                "Seconds must be an integer."
+            )  # pylint: disable=raise-missing-from
         self._original = str(original)
         self._seconds = int(seconds)
 
@@ -50,6 +52,21 @@ class Duration:
 
     def __iter__(self):
         yield from (self._original, self._seconds)
+
+    def __gt__(self, other):
+        return int(self) > int(other)
+
+    def __ge__(self, other):
+        return int(self) >= int(other)
+
+    def __lt__(self, other):
+        return int(self) < int(other)
+
+    def __le__(self, other):
+        return int(self) <= int(other)
+
+    def __eq__(self, other):
+        return int(self) == int(other)
 
     @property
     def original(self) -> str:
@@ -67,10 +84,10 @@ class Duration:
 
     # TODO: Create a docstring for this class
     @classmethod
-    async def convert(cls, ctx, argument):
+    async def convert(cls, ctx, argument):  # pylint: disable=unused-argument
         try:
             return cls(argument, int(argument))
-        except:
+        except:  # pylint:disable=bare-except
             pass
         seconds = 0
         match = re.findall(
@@ -83,7 +100,7 @@ class Duration:
         return cls(argument, round(seconds))
 
 
-def parse(param: typing.Union[int, datetime.timedelta]) -> ParsedDuration:
+def parse(param: typing.Union[int, Duration, datetime.timedelta]) -> ParsedDuration:
     """
     This function takes an int or timedelta parameter of seconds and formats it, returning a named tuple ParsedDuration that has years, weeks, days, hours, minutes and seconds. It also includes the total_seconds, the input.
     """
@@ -107,7 +124,7 @@ def parse(param: typing.Union[int, datetime.timedelta]) -> ParsedDuration:
 
 
 def strfdur(
-    param: typing.Union[int, datetime.timedelta, ParsedDuration],
+    param: typing.Union[int, Duration, ParsedDuration, datetime.timedelta],
     *,
     compact: bool = False,
     letter: bool = False,
@@ -144,8 +161,10 @@ def strfdur(
             fmt = f":{_fmt(*times[0])}"
         else:
             fmt = ":".join(_fmt(*t) for t in times)
-    elif len(times) > 2:
-        fmt = f"{', '.join(_fmt(*t) for t in times[:-1])}, and {_fmt(*times[-1])}"
     else:
-        fmt = " and ".join(_fmt(*t) for t in times)
+        fmt = _and(*(_fmt(*t) for t in times))
+    #    elif len(times) > 2:
+    #        fmt = f"{', '.join(_fmt(*t) for t in times[:-1])}, and {_fmt(*times[-1])}"
+    #    else:
+    #        fmt = " and ".join(_fmt(*t) for t in times)
     return fmt

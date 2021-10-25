@@ -698,3 +698,14 @@ class Permissions(commands.Converter, discord.Permissions):
             except:
                 raise InvalidPermission(p)
         return perm
+
+if opts := getattr(commands.core, "application_option_channel_types"):
+    opts.update(
+        {
+            TextChannel: opts[discord.TextChannel],
+            VoiceChannel: opts[discord.VoiceChannel],
+            StageChannel: opts[discord.StageChannel],
+            CategoryChannel: opts[discord.CategoryChannel],
+            Thread: opts[discord.Thread],
+        }
+    )
