@@ -53,10 +53,11 @@ class Context(commands.Context):
         perms: discord.Permissions = self.channel.permissions_for(self.me)
 
         def error(thing):
-            raise commands.CheckFailure(
-                "Cannot Send",
-                f"I don't have permission to {thing} in {self.channel.mention}!",
-            )  # A harmless error instead of icky 4xx
+            if not getattr(self, "interaction", None): #slash commands do be special
+                raise commands.CheckFailure(
+                    "Cannot Send",
+                    f"I don't have permission to {thing} in {self.channel.mention}!",
+                )  # A harmless error instead of icky 4xx
 
         if (
             not perms.send_messages
