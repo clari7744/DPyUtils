@@ -699,7 +699,7 @@ class Permissions(commands.Converter, discord.Permissions):
                 raise InvalidPermission(p)
         return perm
 
-if opts := getattr(commands.core, "application_option_channel_types"):
+if opts := getattr(commands.core, "application_option_channel_types", None):
     opts.update(
         {
             TextChannel: opts[discord.TextChannel],
