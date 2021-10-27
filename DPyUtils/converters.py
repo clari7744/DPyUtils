@@ -186,10 +186,17 @@ async def result_handler(ctx: commands.Context, result, argument):
         raise KillCommand(
             f"Too many matches found for your search `{argument}`. Please refine your search and try again."
         )
+    def objfmt(obj):
+        s = str(obj)
+        if not isinstance(obj, (discord.User, discord.Member, discord.Color, discord.CategoryChannel)) and hasattr(obj, 'mention'):
+            s = obj.mention
+        if hasattr(obj, 'id'): s += f" (`{obj.id}`)"
+        if c := getattr(obj, "category", None): s += f' (`{obj.category}`)'
+        return s
     matchlist = "\n".join(
         [
-            f"**{i+1}.** {v.mention if not isinstance(v, (discord.User, discord.Member, discord.Color, discord.CategoryChannel)) else v} (`{v.id}`){f' (`{v.category}`)' if getattr(v, 'category', None) else ''}"
-            for i, v in enumerate(result)
+            f"**{i}.** {objfmt(v)}"
+            for i, v in enumerate(result,1)
         ]
     )
     t = (
