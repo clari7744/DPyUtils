@@ -18,7 +18,7 @@ class DeleteButton(discord.ui.Button):
                 await interaction.message.delete()
             else:
                 await interaction.response.send_message(
-                    "You can only delete your own messages.", ephemeral=True
+                    "You can only delete your own command responses.", ephemeral=True
                 )
         except Exception as e:
             print(traceback.format_exception(type(e), e, e.__traceback__))
