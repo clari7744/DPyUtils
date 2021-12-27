@@ -1,6 +1,6 @@
 asyncio
 datetime
-discord.py
+git+https://github.com/iDevision/enhanced-discord.py
 DiscordUtils
 postbin
 typing
