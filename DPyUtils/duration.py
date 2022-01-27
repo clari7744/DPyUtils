@@ -158,7 +158,7 @@ def strfdur(
             times = times[i:]
             break
         if len(times) == 1 and times[0][0] == "second":
-            fmt = f":{_fmt(*times[0])}"
+            fmt = f"0:{_fmt(*times[0])}"
         else:
             fmt = ":".join(_fmt(*t) for t in times)
     else:
