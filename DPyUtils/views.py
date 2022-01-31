@@ -1,6 +1,5 @@
 import discord
 from . import Context
-from discord.ext import commands
 
 
 class Confirmation(discord.ui.View):
@@ -14,7 +13,9 @@ class Confirmation(discord.ui.View):
         await self.wait()
         return self.resp
 
-    async def interaction_check(self, interaction: discord.Interaction):
+    async def interaction_check(
+        self, item: discord.ui.Item, interaction: discord.Interaction
+    ):
         return interaction.user.id == self.ctx.author.id
 
     @discord.ui.button(emoji="✅", label="Confirm", style=discord.ButtonStyle(3))

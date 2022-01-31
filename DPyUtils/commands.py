@@ -12,11 +12,11 @@ class Command(commands.Command):
     async def invoke(self, ctx: commands.Context):
         if (
             self.trigger_typing is False
-            or not getattr(ctx.bot, '_type_on_command', False)
+            or not getattr(ctx.bot, "_type_on_command", False)
             or not ctx.channel.permissions_for(ctx.me).send_messages
         ):
             pass
-        elif getattr(ctx.bot, '_type_on_command', False) or self.trigger_typing is True:
+        elif getattr(ctx.bot, "_type_on_command", False) or self.trigger_typing is True:
             await ctx.trigger_typing()
         return await super().invoke(ctx)
 
