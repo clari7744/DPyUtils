@@ -130,7 +130,10 @@ class Context(commands.Context):
             "del_em", await self.bot.get_del_emoji(self.bot, self.message)
         )
         use_react = kwargs.pop("use_react", True)
-        kwargs.setdefault("embed", None)
+        if kwargs.get("embed"):
+            kwargs["embeds"] = [kwargs.pop("embed")]
+        elif not kwargs.get("embeds"):
+            kwargs["embed"] = None
         if any(k in kwargs for k in ("file", "files", "ephemeral")):
             no_edit = True
         mid = self.message.id
