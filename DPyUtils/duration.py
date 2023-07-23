@@ -1,9 +1,13 @@
-import re, typing, collections, datetime
+import datetime
+import re
+from collections import namedtuple
+from typing import Union
+
 from discord.ext import commands
-from .utils import s, _and  # pylint: disable=relative-beyond-top-level
 
+from .utils import _and, s
 
-ParsedDuration = collections.namedtuple(
+ParsedDuration = namedtuple(
     "ParsedDuration",
     "years weeks days hours minutes seconds total_seconds",
     defaults=[0, 0, 0, 0, 0, 0, 0],
@@ -23,11 +27,7 @@ durations = {
 class InvalidTimeFormat(commands.BadArgument):
     def __init__(self, argument):
         self.argument = argument
-        super().__init__(
-            "'{}' is an invalid format for time! Format must be '1y1w1d1h1m1s'.".format(
-                argument
-            )
-        )
+        super().__init__("'{}' is an invalid format for time! Format must be '1y1w1d1h1m1s'.".format(argument))
 
 
 class Duration:
@@ -35,9 +35,7 @@ class Duration:
         try:
             seconds = int(seconds)
         except:
-            raise TypeError(
-                "Seconds must be an integer."
-            )  # pylint: disable=raise-missing-from
+            raise TypeError("Seconds must be an integer.")  # pylint: disable=raise-missing-from
         self._original = str(original)
         self._seconds = int(seconds)
 
@@ -90,9 +88,7 @@ class Duration:
         except:  # pylint:disable=bare-except
             pass
         seconds = 0
-        match = re.findall(
-            "([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument
-        )  # pylint: disable=anomalous-backslash-in-string
+        match = re.findall(r"([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument)
         if not match:
             raise InvalidTimeFormat(argument)
         for item in match:
@@ -100,14 +96,12 @@ class Duration:
         return cls(argument, round(seconds))
 
 
-def parse(param: typing.Union[int, Duration, datetime.timedelta]) -> ParsedDuration:
+def parse(param: Union[int, Duration, datetime.timedelta]) -> ParsedDuration:
     """
     This function takes an int or timedelta parameter of seconds and formats it, returning a named tuple ParsedDuration that has years, weeks, days, hours, minutes and seconds. It also includes the total_seconds, the input.
     """
     parsed = {}
-    seconds = (
-        param.total_seconds() if isinstance(param, datetime.timedelta) else int(param)
-    )
+    seconds = param.total_seconds() if isinstance(param, datetime.timedelta) else int(param)
     ts = int(seconds)
     for unit, sec in durations.items():
         parsed[unit], seconds = divmod(seconds, sec)
@@ -124,23 +118,14 @@ def parse(param: typing.Union[int, Duration, datetime.timedelta]) -> ParsedDurat
 
 
 def strfdur(
-    param: typing.Union[int, Duration, ParsedDuration, datetime.timedelta],
+    param: Union[int, Duration, ParsedDuration, datetime.timedelta],
     *,
     compact: bool = False,
     letter: bool = False,
 ) -> str:
-    dur: ParsedDuration = (
-        parse(param) if not isinstance(param, ParsedDuration) else param
-    )
-    dict_times = {
-        incr: getattr(dur, incr + "s")
-        for incr in ["year", "week", "day", "hour", "minute", "second"]
-    }
-    times = [
-        (k, int(v))
-        for k, v in dict_times.items()
-        if v or (k not in ("year", "week") and compact)
-    ]
+    dur: ParsedDuration = parse(param) if not isinstance(param, ParsedDuration) else param
+    dict_times = {incr: getattr(dur, incr + "s") for incr in ["year", "week", "day", "hour", "minute", "second"]}
+    times = [(k, int(v)) for k, v in dict_times.items() if v or (k not in ("year", "week") and compact)]
 
     def _fmt(unit, val):
         if compact:
