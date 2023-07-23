@@ -1,15 +1,15 @@
-# dpy-utils
+# DPyUtils
 Some extra discord.py utilities
 
 ## Installation:
 Linux/MacOS:
 ```sh
-python3 -m pip install -U git+https://github.com/Clari-7744/dpy-utils
+python3 -m pip install -U git+https://github.com/clari77444/DPyUtils
 ```
 
 Windows:
 ```ps
-py -3 -m pip install -U git+https://github.com/Clari-7744/dpy-utils
+py -3 -m pip install -U git+https://github.com/clari77444/DPyUtils
 ```
 
 ## Information
@@ -26,6 +26,7 @@ py -3 -m pip install -U git+https://github.com/Clari-7744/dpy-utils
 
 ##### Coming Soon (More details later):
 * Debug Cog
+* `utils.an`, similar to `utils.s`
 </details>
 
 <details>

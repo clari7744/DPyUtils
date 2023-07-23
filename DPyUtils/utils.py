@@ -4,17 +4,20 @@
 # - params: bot,check=None,timeout=None,*,yes='✅',no='❌'
 # wait_for_reaction_or_message
 
-import discord, os, traceback
+import os
+import traceback
+from typing import Iterable, List, Union
+
+import discord
 from discord.ext import commands
-from typing import Union, List, Iterable
 
 
-def load_extensions(
+async def load_extensions(
     bot: commands.Bot,
     *,
-    directories: List = ["cogs"],
-    extra_cogs: List = None,
-    skip: List = None,
+    directories: List[str] = ["cogs"],
+    extra_cogs: List[str] = None,
+    skip: List[str] = None,
 ):
     extensions = [*(extra_cogs or [])]
     directories = [*directories]
@@ -25,17 +28,17 @@ def load_extensions(
                 extensions.append(f"{_dir.replace('/', '.')}.{file[:-3]}")
     print(f"Extensions to attempt to load: {', '.join(extensions)}")
     extensions = [e for e in extensions if e not in skip]
+    maxl = max(map(len, extensions)) + 2
     for e in extensions:
+        e = f"'{e}'"
         try:
-            bot.load_extension(e)
-            print(f"Loaded '{e}' successfully.")
+            await bot.load_extension(e.strip("'"))
+            print(f"Loaded {e:{maxl}} successfully.")
         except Exception as err:
             print(f"Failed to load {e}!\nReason:\n{err}")
-            print(
-                "".join(traceback.format_exception(type(err), err, err.__traceback__))
-            )
+            print("".join(traceback.format_exception(type(err), err, err.__traceback__)))
     for e in skip:
-        print(f"Skipped {e}")
+        print(f"Skipped '{e}'")
 
 
 async def try_dm(
@@ -50,22 +53,42 @@ async def try_dm(
         return None if not fallback_ctx else await ctx.send(content, **kwargs)
     try:
         return await member.send(content, **kwargs)
-    except:
-        if (
-            fallback_ctx and isinstance(ctx.channel, discord.DMChannel)
-        ) or not fallback_ctx:
+    except Exception as e:
+        if (fallback_ctx and isinstance(ctx.channel, discord.DMChannel)) or not fallback_ctx:
             return None
         return await ctx.send(content, **kwargs)
 
 
 def s(value: Union[Iterable, int]):
+    """
+    returns `s` if the given number or iterable is not equal to 1
+    """
     num = value if isinstance(value, int) else len(value)
     return "s" if num != 1 else ""
 
 
-def _and(*args):
+def _and(*args: str):
+    """
+    Joins the given values with commas and the word "and" at the end
+    """
     if len(args) > 2:
         fmt = f"{', '.join(args[:-1])}, and {args[-1]}"
     else:
         fmt = " and ".join(args)
     return fmt
+
+
+def trim(text: str, max_len: int):
+    """
+    Trims the text to the maximum length and adds ellipsis if it's too long
+    """
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
+
+
+def yn(val: bool):
+    """
+    Convert a value to Yes/No
+    """
+    return "Yes" if val else "No"

@@ -1,13 +1,14 @@
-import discord, re
+import re
+
+import discord
 from discord.ext import commands
 
 if not discord.version_info >= (2, 0, 0):
     raise TypeError("Sorry, this can only be used in v2")
 from dataclasses import dataclass
-from discord.utils import MISSING
-
-
 from typing import Any, Dict, List, Optional
+
+from discord.utils import MISSING
 
 
 class FlagIsSwitch(commands.FlagError):
@@ -110,12 +111,12 @@ class FlagConverter(
     prefix="-",
     delimiter=" ",
 ):
-    def _switch(flag: Flag):
+    @classmethod
+    def _switch(cls, flag: Flag):
         return getattr(flag, "switch", False) and flag.annotation == bool
 
     @classmethod
     def parse_flags(cls, argument: str) -> Dict[str, List[str]]:
-        # pylint: disable=no-member;
         result: Dict[str, List[str]] = {}
         flags = cls.__commands_flags__
         aliases = cls.__commands_flag_aliases__
@@ -128,9 +129,7 @@ class FlagConverter(
         prereg = cls.__commands_flag_regex__
         if delim == " ":
             regex = cls.__commands_flag_regex__ = re.compile(
-                prereg.pattern.replace(
-                    f"){re.escape(delim)})", f")({re.escape(delim)}|\Z))"
-                ),
+                prereg.pattern.replace(f"){re.escape(delim)})", rf")({re.escape(delim)}|\Z))"),
                 prereg.flags,
             )
         else:

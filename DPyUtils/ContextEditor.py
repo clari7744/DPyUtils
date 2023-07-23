@@ -1,6 +1,9 @@
-import discord, asyncio, os
-from discord.ext import commands
+import asyncio
+import os
 from typing import Union
+
+import discord
+from discord.ext import commands
 
 
 class Context(commands.Context):
@@ -16,13 +19,9 @@ class Context(commands.Context):
             return
         if not isinstance(del_em, discord.Emoji):
             try:
-                del_em = await self.bot.fetch_emoji(
-                    int(del_em)
-                )  # Get a custom emoji by ID if possible
+                del_em = await self.bot.fetch_emoji(int(del_em))  # Get a custom emoji by ID if possible
             except:
-                del_em = str(
-                    del_em
-                )  # It's either unicode, full custom format `<a?:name:ID>`, or trash
+                del_em = str(del_em)  # It's either unicode, full custom format `<a?:name:ID>`, or trash
         try:
             await msg.add_reaction(del_em)  # Attempt to add the reaction
         except:
@@ -32,17 +31,12 @@ class Context(commands.Context):
                 "reaction_add",
                 check=lambda r, u: str(r.emoji) == del_em
                 and not u.bot
-                and (
-                    u.id == self.author.id
-                    or r.message.channel.permissions_for(u).manage_messages
-                )
+                and (u.id == self.author.id or r.message.channel.permissions_for(u).manage_messages)
                 and r.message.id == msg.id,
                 timeout=120,
             )  # Wait for the author or a user with manage_messages to click the delete reaction
         except asyncio.TimeoutError:
-            await msg.remove_reaction(
-                del_em, self.me
-            )  # They didn't click within two minutes, so delete the reaction
+            await msg.remove_reaction(del_em, self.me)  # They didn't click within two minutes, so delete the reaction
         else:
             try:
                 await msg.delete()  # They *did* click the reaction, so attempt to delete the message
@@ -59,23 +53,17 @@ class Context(commands.Context):
                     f"I don't have permission to {thing} in {self.channel.mention}!",
                 )  # A harmless error instead of icky 4xx
 
-        if (
-            not perms.send_messages
-        ):  # Most basic can't send that you'd think discord.py would handle
+        if not perms.send_messages:  # Most basic can't send that you'd think discord.py would handle
             error("send messages")
         if (
             kwargs.get("embed", kwargs.get("embeds", None)) and not perms.embed_links
         ):  # it's trying to send an embed without perms, so fail lol
             error("embed links")
-        if (
-            kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files
-        ):  # same as embeds but files
+        if kwargs.get("file", kwargs.get("files", None)) and not perms.attach_files:  # same as embeds but files
             error("attach files")
         if kwargs.get("reference", None):
             try:
-                return await super().send(
-                    content, **kwargs
-                )  # whoooo all permission checks were passed
+                return await super().send(content, **kwargs)  # whoooo all permission checks were passed
             except discord.HTTPException as e:
                 if "message_reference" in str(e):
                     kwargs.pop("reference")
@@ -126,9 +114,7 @@ class Context(commands.Context):
         no_save, no_edit = [kwargs.pop(k, False) for k in ("no_save", "no_edit")]
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
-        del_em = kwargs.pop(
-            "del_em", await self.bot.get_del_emoji(self.bot, self.message)
-        )
+        del_em = kwargs.pop("del_em", await self.bot.get_del_emoji(self.bot, self.message))
         use_react = kwargs.pop("use_react", True)
         if kwargs.get("embed"):
             kwargs["embeds"] = [kwargs.pop("embed")]
@@ -145,9 +131,7 @@ class Context(commands.Context):
             msg = await self._send(content, **kwargs)
             self.msg_cache[mid] = msg
             if len(self.msg_cache) >= self.msg_cache_size:
-                self.bot.msg_cache = dict(
-                    list(self.msg_cache.items())[1:]
-                )  # Janky way of capping the dict=
+                self.bot.msg_cache = dict(list(self.msg_cache.items())[1:])  # Janky way of capping the dict=
             return msg, del_em, use_react
 
         if no_edit:
@@ -271,9 +255,7 @@ class ContextEditor:
             return emoji
         if emoji.isdigit():
             try:
-                emoji = await bot.fetch_emoji(
-                    int(emoji)
-                )  # Get a custom emoji by ID if possible
+                emoji = await bot.fetch_emoji(int(emoji))  # Get a custom emoji by ID if possible
             except:
                 emoji = (int if allow_partial else str)(emoji)
         else:
@@ -281,11 +263,11 @@ class ContextEditor:
         return emoji
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot):
     ContextEditor(bot, Context)
 
 
-def teardown(bot: commands.Bot):
+async def teardown(bot: commands.Bot):
     bot_super = super(bot.__class__, bot)
     get_l = lambda l: discord.utils.find(
         lambda e: e.__self__.__class__.__name__ == "ContextEditor",

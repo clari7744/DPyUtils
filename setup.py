@@ -1,5 +1,6 @@
-from setuptools import setup
 import subprocess
+
+from setuptools import setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -24,11 +25,11 @@ except:
     pass
 
 setup(
-    name="dpy-utils",
+    name="DPyUtils",
     version=ver,
     author="Clari",
     author_email="clarinet.puppy@gmail.com",
-    url="https://github.com/Clari-7744/dpy-utils",
+    url="https://github.com/clari77444/DPyUtils",
     license="MIT",
     description="Some discord.py utils by Clari",
     long_description=long_description,

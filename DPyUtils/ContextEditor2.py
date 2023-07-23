@@ -1,6 +1,11 @@
-import discord, traceback
+import traceback
+
+import discord
 from discord.ext import commands
-from .ContextEditor import Context as OldContext, ContextEditor, teardown as _teardown
+
+from .ContextEditor import Context as OldContext
+from .ContextEditor import ContextEditor
+from .ContextEditor import teardown as _teardown
 
 
 class DeleteButton(discord.ui.Button):
@@ -43,9 +48,9 @@ class Context(OldContext):
         return await super().send(content, **(await self.add_del_button(kwargs)))
 
 
-def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot):
     ContextEditor(bot, Context)
 
 
-def teardown(bot: commands.Bot):
-    _teardown(bot)
+async def teardown(bot: commands.Bot):
+    await _teardown(bot)

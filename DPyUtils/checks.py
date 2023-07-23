@@ -1,4 +1,6 @@
-import discord, typing
+import typing
+
+import discord
 from discord.ext import commands
 
 
@@ -6,9 +8,7 @@ def is_guild_owner():
     def pred(ctx: commands.Context):
         if ctx.author.id == ctx.guild.owner_id:
             return True
-        raise commands.CheckFailure(
-            f"This command can only be used by the guild owner!"
-        )
+        raise commands.CheckFailure(f"This command can only be used by the guild owner!")
 
     return commands.check(pred)
 
@@ -19,12 +19,15 @@ def check_hierarchy(
     *,
     return_bool: bool = False,
 ):
+    if not ctx.guild:
+        raise commands.NoPrivateMessage()
+
     def err(thing):
         if return_bool:
             return False
         raise commands.CheckFailure(f"{obj} is higher than {thing}!")
 
-    if ctx.bot.top_role <= getattr(obj, "top_role", obj):
+    if ctx.me.top_role <= getattr(obj, "top_role", obj):
         return err("me")
     if ctx.author.top_role <= getattr(obj, "top_role", obj):
         return err("you")
