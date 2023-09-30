@@ -63,7 +63,7 @@ def s(value: Union[Iterable, int]):
     """
     returns `s` if the given number or iterable is not equal to 1
     """
-    num = value if isinstance(value, int) else len(value)
+    num = value if isinstance(value, (int, float)) else len(value)
     return "s" if num != 1 else ""
 
 

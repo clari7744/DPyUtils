@@ -206,6 +206,9 @@ class ContextEditor:
             await self.bot_super.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
+        # Sending a message with an attachment link triggers a message edit with content None to show the embed, this should hopefully catch that.
+        if payload.data.get("content") is None:
+            return
         chan = self.bot.get_channel(payload.channel_id)
         if not chan:
             return
