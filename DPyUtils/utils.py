@@ -83,7 +83,7 @@ def trim(text: str, max_len: int):
     Trims the text to the maximum length and adds ellipsis if it's too long
     """
     if len(text) > max_len:
-        return text[: max_len - 3] + "..."
+        return text[: max_len - 1] + "…"
     return text
 
 
