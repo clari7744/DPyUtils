@@ -116,7 +116,8 @@ class FlagConverter(
         return getattr(flag, "switch", False) and flag.annotation == bool
 
     @classmethod
-    def parse_flags(cls, argument: str) -> Dict[str, List[str]]:
+    def parse_flags(cls, argument: str, *, ignore_extra: bool = True) -> Dict[str, List[str]]:
+        # pylint: disable=no-member;
         result: Dict[str, List[str]] = {}
         flags = cls.__commands_flags__
         aliases = cls.__commands_flag_aliases__
@@ -161,18 +162,21 @@ class FlagConverter(
                     continue
                 if not value:
                     raise commands.MissingFlagArgument(last_flag)
+                name = last_flag.name.casefold() if case_insensitive else last_flag.name
                 try:
-                    values = result[last_flag.name]
+                    values = result[name]
                 except KeyError:
-                    result[last_flag.name] = [value]
+                    result[name] = [value]
                 else:
                     values.append(value)
             last_position = end
             last_flag = flag
 
+        # Get the remaining string, if applicable
+        value = argument[last_position:].strip()
+
         # Add the remaining string to the last available flag
-        if last_position and last_flag is not None:
-            value = argument[last_position:].strip()
+        if last_flag is not None:
             if cls._switch(last_flag):
                 if value:
                     if not commands.converter._convert_to_bool(value):
@@ -183,12 +187,17 @@ class FlagConverter(
 
             if not value:
                 raise commands.MissingFlagArgument(last_flag)
+            name = last_flag.name.casefold() if case_insensitive else last_flag.name
+
             try:
-                values = result[last_flag.name]
+                values = result[name]
             except KeyError:
-                result[last_flag.name] = [value]
+                result[name] = [value]
             else:
                 values.append(value)
+        elif value and not ignore_extra:
+            # If we're here then we passed extra arguments that aren't flags
+            raise commands.TooManyArguments(f"Too many arguments passed to {cls.__name__}")
 
         # Verification of values will come at a later stage
         return result
