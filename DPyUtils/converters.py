@@ -42,6 +42,7 @@ from discord.ext.commands.errors import (
 # TODO:: Update GuildChannel converters to reflect new d.py 2.0 streamlined state
 
 v2 = discord.version_info >= (2, 0, 0)
+Context = commands.Context[Bot]
 
 
 class UserNotType(BadArgument):
@@ -124,14 +125,14 @@ def search(
     return result
 
 
-async def on_command_error(ctx: commands.Context, error):
+async def on_command_error(ctx: Context, error):
     if isinstance(error, KillCommand):
         await ctx.channel.send(str(error), delete_after=5)
     else:
         await ctx.bot.converters_original_on_command_error(ctx, error)
 
 
-async def result_handler(ctx: commands.Context, result, argument):
+async def result_handler(ctx: Context, result, argument):
     if not hasattr(ctx.bot, "converters_original_on_command_error"):
         ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
@@ -235,7 +236,7 @@ class Member(MemberConverter, discord.Member):
         return result
 
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.Member:  # , *, mem_type="EITHER"
+    async def convert(cls, ctx: Context, argument: str) -> discord.Member:  # , *, mem_type="EITHER"
         bot = ctx.bot
         mem_type = cls.mem_type
         match = IDConverter._get_id_match(argument) or re.match(r"<@!?([0-9]{15,20})>$", argument)
@@ -282,7 +283,7 @@ class BotMember(Member):
 
 
 #    @classmethod
-#    async def convert(cls, ctx: commands.Context, argument):
+#    async def convert(cls, ctx: Context, argument):
 #        return await Member.convert(ctx, argument, mem_type="BOT")
 
 
@@ -291,7 +292,7 @@ class HumanMember(Member):
 
 
 #    @classmethod
-#    async def convert(cls, ctx: commands.Context, argument):
+#    async def convert(cls, ctx: Context, argument):
 #        return await Member.convert(ctx, argument, mem_type="HUMAN")
 
 
@@ -303,7 +304,7 @@ class User(UserConverter, discord.User):
     mem_type: Literal["EITHER", "MEMBER", "BOT"] = "EITHER"
 
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument) -> discord.User:  # , *, mem_type="EITHER"
+    async def convert(cls, ctx: Context, argument) -> discord.User:  # , *, mem_type="EITHER"
         bot = ctx.bot
         mem_type = cls.mem_type
         match = cls._get_id_match(argument) or re.match(r"<@!?([0-9]+)>$", argument)
@@ -349,7 +350,7 @@ class BotUser(User):
 
 
 #    @classmethod
-#    async def convert(cls, ctx: commands.Context, argument):
+#    async def convert(cls, ctx: Context, argument):
 #        return await User.convert(ctx, argument, mem_type="BOT")
 
 
@@ -358,7 +359,7 @@ class HumanUser(User):
 
 
 #    @classmethod
-#    async def convert(cls, ctx: commands.Context, argument):
+#    async def convert(cls, ctx: Context, argument):
 #        return await User.convert(ctx, argument, mem_type="HUMAN")
 
 
@@ -368,7 +369,7 @@ class Role(RoleConverter, discord.Role):
     """
 
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument):
+    async def convert(cls, ctx: Context, argument):
         guild = ctx.guild
         if not guild:
             raise NoPrivateMessage()
@@ -386,7 +387,7 @@ class Role(RoleConverter, discord.Role):
 
 class Color(ColorConverter, discord.Color):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument):
+    async def convert(cls, ctx: Context, argument):
         clr = discord.colour
         try:
             int_arg = int(argument)
@@ -416,13 +417,13 @@ class Color(ColorConverter, discord.Color):
 
 
 class Emoji(EmojiConverter):
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(self, ctx: Context, argument):
         # https://gist.github.com/Phxntxm/a91e0cfadb19b2071554d59edcd1df6c
         return await super().convert(ctx, argument)
 
 
 class Guild(GuildConverter):
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(self, ctx: Context, argument):
         return await super().convert(ctx, argument)
 
 
@@ -439,7 +440,7 @@ def get_all(bot, thing):
 class GuildChannel(GuildChannelConverter):
     @staticmethod
     async def _resolve_channel(
-        ctx: commands.Context,
+        ctx: Context,
         argument: str,
         attribute: str,
         _type: Type[CT],
@@ -484,7 +485,7 @@ class GuildChannel(GuildChannelConverter):
         return await result_handler(ctx, result, argument)
 
     @staticmethod
-    async def _resolve_thread(ctx: commands.Context, argument: str, attribute: str, _type: Type[TT]):
+    async def _resolve_thread(ctx: Context, argument: str, attribute: str, _type: Type[TT]):
         bot: Bot = ctx.bot
         get_all(bot, "threads")
         match = IDConverter._get_id_match(argument) or re.match(r"<#([0-9]{15,20})>$", argument)
@@ -515,43 +516,43 @@ class GuildChannel(GuildChannelConverter):
 
 class CategoryChannel(CategoryChannelConverter, discord.CategoryChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.CategoryChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.CategoryChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "categories", discord.CategoryChannel)
 
 
 class TextChannel(TextChannelConverter, discord.TextChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.CategoryChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.CategoryChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "text_channels", discord.TextChannel)
 
 
 class NewsChannel(TextChannelConverter, discord.TextChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.TextChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.TextChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "text_channels", discord.TextChannel, news=True)
 
 
 class ForumChannel(ForumChannelConverter, discord.ForumChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.ForumChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.ForumChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "forums", discord.ForumChannel)
 
 
 class VoiceChannel(VoiceChannelConverter, discord.VoiceChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.VoiceChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.VoiceChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "voice_channels", discord.VoiceChannel)
 
 
 class StageChannel(StageChannelConverter, discord.StageChannel):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.StageChannel:
+    async def convert(cls, ctx: Context, argument: str) -> discord.StageChannel:
         return await GuildChannel._resolve_channel(ctx, argument, "stage_channels", discord.StageChannel)
 
 
 class Thread(ThreadConverter, discord.Thread):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument: str) -> discord.Thread:
+    async def convert(cls, ctx: Context, argument: str) -> discord.Thread:
         if not v2:
             raise commands.CheckFailure("Sorry, you can't use this until v2")
         return await GuildChannel._resolve_thread(ctx, argument, "threads", discord.Thread)
@@ -561,7 +562,7 @@ class AnyChannelBase(commands.Converter):
     converters: list
 
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument, converters=[]):
+    async def convert(cls, ctx: Context, argument, converters=[]):
         converters = converters or cls.converters
         result = None
         for converter in converters:
@@ -592,7 +593,7 @@ class NonCategoryChannel(AnyChannelBase):
 
 class Message(MessageConverter):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument):
+    async def convert(cls, ctx: Context, argument):
         await cls().convert(ctx, argument.strip("<>"))
 
 
@@ -601,14 +602,14 @@ class IgnoreCaseLiteral(commands.Converter):
         cls.parameters = tuple(str(param).lower() for param in parameters)
         return cls
 
-    async def convert(self, ctx: commands.Context, argument):
+    async def convert(self, ctx: Context, argument):
         if str(argument).lower() not in self.parameters:
             raise commands.BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
         return argument
 
 
 class IntList(commands.Converter):
-    async def convert(self, ctx: commands.Context, argument) -> List[int]:
+    async def convert(self, ctx: Context, argument) -> List[int]:
         arguments: List[str] = " ".join(map(str.strip, argument.split(","))).split(" ")
         intargs: List[int] = []
         for i in arguments:
@@ -621,7 +622,7 @@ class IntList(commands.Converter):
 
 class Permissions(commands.Converter, discord.Permissions):
     @classmethod
-    async def convert(cls, ctx: commands.Context, argument) -> discord.Permissions:
+    async def convert(cls, ctx: Context, argument) -> discord.Permissions:
         if argument.isdigit() and int(argument) < discord.Permissions.all().value:
             return discord.Permissions(int(argument))
         perms = argument.replace("server", "guild").lower().split()
