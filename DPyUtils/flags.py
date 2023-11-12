@@ -226,21 +226,23 @@ class FlagConverter(
         return "\n".join(map(format_flag, flags))
 
 
-def addflags(flags: commands.FlagConverter):
-    """
-    Decorator to add flags to a command's attributes to be used later (mostly by the help command).
-    """
-    if not issubclass(flags, commands.FlagConverter):
-        raise TypeError(f"{flags} must be a subclass of `DPyUtils.FlagConverter`.")
+# Turns out this is useless and doesn't work, to debug later
+# For now use `flags=` kwarg in command decorator (only works in clari7744's fork of DPy, maybe this function works in Rapptz?)
+# def addflags(flags: commands.FlagConverter):
+#    """
+#    Decorator to add flags to a command's attributes to be used later (mostly by the help command).
+#    """
+#    if not issubclass(flags, commands.FlagConverter):
+#        raise TypeError(f"{flags} must be a subclass of `DPyUtils.FlagConverter`.")
 
-    def deco(func):
-        if isinstance(func, commands.Command):
-            func.flags = flags
-        else:
-            func.__flags__ = flags
-        return func
+#    def deco(func):
+#        if isinstance(func, commands.Command):
+#            func.flags = flags
+#        else:
+#            func.__flags__ = flags
+#        return func
 
-    return deco
+#    return deco
 
 
 def get_flag_signature(flagclass: FlagConverter):
