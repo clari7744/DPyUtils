@@ -20,9 +20,8 @@ py -3 -m pip install -U git+https://github.com/clari7744/DPyUtils.git
 * Duration utilities
 * Context editor: Allows users to edit their message, which will edit the command response.
 * Extra converters: 
-  * Advanced Converters: Member, User, Role, Color, TextChannel, VoiceChannel, StageChannel, CategoryChannel
+  * Advanced Converters: Member, User, Role, Color, CategoryChannel, TextChannel, ForumChannel, Thread, VoiceChannel, StageChannel, CategoryChannel
   * Added Converters: BotMember, HumanMember, BotUser, HumanUser, NewsChannel, AnyChannel, NonCategoryChannel
-* Tasks system: A cog for a to-do list
 
 ##### Coming Soon (More details later):
 * Debug Cog
