@@ -60,4 +60,4 @@ To use the utilities provided in this module, just import `DPyUtils.duration`
 While this repository is meant to be fairly stable, as I have a personal repository that I use for testing and I do plan to only add items to this build once they've been tested and found to be bug-free, I'm not perfect, and there may be some issues. If you do run into any problems while using my tools, please ping me in [my server](https://discord.gg/EQkDnBS) so I can take a look and get that fixed. 
 Thank you for your help debugging, and thanks for using my discord.py utilities!
 
-\- 💜Clari#7744
+\- @clari7744
