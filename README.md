@@ -2,14 +2,14 @@
 Some extra discord.py utilities
 
 ## Installation:
-Linux/MacOS:
+Linux / macOS / Windows Store:
 ```sh
-python3 -m pip install -U git+https://github.com/clari77444/DPyUtils
+python3 -m pip install -U git+https://github.com/clari7744/DPyUtils
 ```
 
 Windows:
 ```ps
-py -3 -m pip install -U git+https://github.com/clari77444/DPyUtils
+py -3 -m pip install -U git+https://github.com/clari7744/DPyUtils
 ```
 
 ## Information
