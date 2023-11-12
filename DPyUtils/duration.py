@@ -13,6 +13,7 @@ ParsedDuration = namedtuple(
     defaults=[0, 0, 0, 0, 0, 0, 0],
 )
 
+
 # All short times corresponding to amount of seconds
 durations = {
     "y": 31536000,  # 60*60*24*365
@@ -34,8 +35,8 @@ class Duration:
     def __init__(self, original: str = "0", seconds: int = 0):
         try:
             seconds = int(seconds)
-        except:
-            raise TypeError("Seconds must be an integer.")  # pylint: disable=raise-missing-from
+        except ValueError as e:
+            raise TypeError("Seconds must be an integer.") from e  # pylint: disable=raise-missing-from
         self._original = str(original)
         self._seconds = int(seconds)
 
@@ -82,10 +83,10 @@ class Duration:
 
     # TODO: Create a docstring for this class
     @classmethod
-    async def convert(cls, ctx, argument):  # pylint: disable=unused-argument
+    async def convert(cls, ctx, argument):
         try:
             return cls(argument, int(argument))
-        except:  # pylint:disable=bare-except
+        except ValueError:
             pass
         seconds = 0
         match = re.findall(r"([0-9]+?(?:\.[0-9]+)?[ywdhms])", argument)
@@ -125,7 +126,9 @@ def strfdur(
 ) -> str:
     dur: ParsedDuration = parse(param) if not isinstance(param, ParsedDuration) else param
     dict_times = {incr: getattr(dur, incr + "s") for incr in ["year", "week", "day", "hour", "minute", "second"]}
-    times = [(k, int(v)) for k, v in dict_times.items() if v or (k not in ("year", "week") and compact)]
+    times = [(k, int(v)) for k, v in dict_times.items() if v or (k not in ("year", "week") and compact)] or [
+        ("second", 0)
+    ]
 
     def _fmt(unit, val):
         if compact:

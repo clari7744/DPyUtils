@@ -202,19 +202,36 @@ class FlagConverter(
         # Verification of values will come at a later stage
         return result
 
-    def get_flag_signature(self):
-        flags = list(self.get_flags().values())
-        prefix = self.__commands_flag_prefix__
-        delim = self.__commands_flag_delimiter__
-        return "\n".join(
-            f"`{prefix}[{'|'.join((flag.name,*flag.aliases))}]{delim}{flag.annotation.__name__ if not getattr(flag, 'switch', None) else 'Switch'}={flag.default}]`{f' | {flag.description}' if getattr(flag, 'description', None) else ''}"
-            for flag in flags
-        )
+    @classmethod
+    def get_flag_signature(cls) -> str:
+        flags = list(cls.get_flags().values())
+        prefix = cls.__commands_flag_prefix__
+        delim = cls.__commands_flag_delimiter__
+
+        def format_flag(flag: Flag):
+            name = flag.name if not flag.aliases else f"[{'|'.join((flag.name,*flag.aliases))}]"
+            annotation = flag.annotation.__name__ if not getattr(flag, "switch", None) else "Switch"
+            default = (
+                f'="{flag.default}"'
+                if isinstance(flag.default, str)
+                else f"={flag.default}"
+                if not flag.required
+                else ""
+            )
+            description = f"\n\t{flag.description}" if getattr(flag, "description", None) is not None else ""
+
+            sig = prefix + name + delim + annotation + default + description
+            return sig if flag.required else f"[{sig}]"
+
+        return "\n".join(map(format_flag, flags))
 
 
-def flags(flags: commands.FlagConverter):
+def addflags(flags: commands.FlagConverter):
+    """
+    Decorator to add flags to a command's attributes to be used later (mostly by the help command).
+    """
     if not issubclass(flags, commands.FlagConverter):
-        raise TypeError(f"{flags} must be a subclass of `commands.FlagConverter`.")
+        raise TypeError(f"{flags} must be a subclass of `DPyUtils.FlagConverter`.")
 
     def deco(func):
         if isinstance(func, commands.Command):
@@ -227,6 +244,6 @@ def flags(flags: commands.FlagConverter):
 
 
 def get_flag_signature(flagclass: FlagConverter):
-    if not issubclass(flagclass, FlagConverter):
+    if not isinstance(flagclass, FlagConverter):
         raise TypeError(f"{flagclass} must be a subclass of `DPyUtils.FlagConverter`.")
     return flagclass.get_flag_signature()

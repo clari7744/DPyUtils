@@ -1,7 +1,2 @@
-asyncio
-datetime
 git+https://github.com/clari7744/discord.py
-DiscordUtils
-postbin
-typing
-setuptools
+git+https://github.com/clari7744/postbin

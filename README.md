@@ -2,14 +2,14 @@
 Some extra discord.py utilities
 
 ## Installation:
-Linux/MacOS:
+Linux / macOS / Microsoft Store:
 ```sh
-python3 -m pip install -U git+https://github.com/clari77444/DPyUtils
+python3 -m pip install -U git+https://github.com/clari7744/DPyUtils.git
 ```
 
 Windows:
 ```ps
-py -3 -m pip install -U git+https://github.com/clari77444/DPyUtils
+py -3 -m pip install -U git+https://github.com/clari7744/DPyUtils.git
 ```
 
 ## Information
@@ -26,14 +26,13 @@ py -3 -m pip install -U git+https://github.com/clari77444/DPyUtils
 
 ##### Coming Soon (More details later):
 * Debug Cog
-* `utils.an`, similar to `utils.s`
 </details>
 
 <details>
 <summary><strong>Duration Utilities</strong></summary><br>
 
 ##### Utilities:
-* `duration.DurationParser`: A converter that converts input from `1y1w1d1h1m1s` format to seconds.
+* `duration.Duration`: A converter that converts input from `1y1w1d1h1m1s` format to seconds.
 * `duration.parse`: Accepts seconds or `datetime.timedelta`, and changes it to a `collections.namedtuple` with each unit in it individually (`duration.ParsedDuration(years=1, weeks=1, days=1, hours=1, minutes=1, seconds=1)`)
 * `duration.strfdur`: Accepts seconds, `datetime.timedelta`, or `duration.ParsedDuration` and converts it to a human-readable string.
   - Example: `10000 seconds` -> `2 hours, 46 minutes, and 40 seconds`
@@ -60,4 +59,4 @@ To use the utilities provided in this module, just import `DPyUtils.duration`
 While this repository is meant to be fairly stable, as I have a personal repository that I use for testing and I do plan to only add items to this build once they've been tested and found to be bug-free, I'm not perfect, and there may be some issues. If you do run into any problems while using my tools, please ping me in [my server](https://discord.gg/EQkDnBS) so I can take a look and get that fixed. 
 Thank you for your help debugging, and thanks for using my discord.py utilities!
 
-\- 💜Clari#7744
+\- @clari7744 💜

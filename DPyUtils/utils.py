@@ -1,9 +1,3 @@
-# TO ADD:
-# wait_for reaction confirmation
-# - optional yes/no reactions, default `✅/❌`, returns boolean maybe idk
-# - params: bot,check=None,timeout=None,*,yes='✅',no='❌'
-# wait_for_reaction_or_message
-
 import os
 import traceback
 from typing import Iterable, List, Union
@@ -53,7 +47,7 @@ async def try_dm(
         return None if not fallback_ctx else await ctx.send(content, **kwargs)
     try:
         return await member.send(content, **kwargs)
-    except Exception as e:
+    except Exception:
         if (fallback_ctx and isinstance(ctx.channel, discord.DMChannel)) or not fallback_ctx:
             return None
         return await ctx.send(content, **kwargs)
@@ -65,6 +59,13 @@ def s(value: Union[Iterable, int]):
     """
     num = value if isinstance(value, (int, float)) else len(value)
     return "s" if num != 1 else ""
+
+
+def an(value: str):
+    """
+    returns `an {value}` if the given value starts with a vowel, otherwise `a {value}`
+    """
+    return f"a{'n' if value.startswith(tuple('aeiou')) else ''} {value}"
 
 
 def _and(*args: str):

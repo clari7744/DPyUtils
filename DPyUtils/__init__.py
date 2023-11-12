@@ -1,6 +1,4 @@
-import discord
-
-from ._flags import *
+from .flags import *
 from .checks import *
 from .ContextEditor2 import *
 from .converters import *

@@ -8,7 +8,7 @@ def is_guild_owner():
     def pred(ctx: commands.Context):
         if ctx.author.id == ctx.guild.owner_id:
             return True
-        raise commands.CheckFailure(f"This command can only be used by the guild owner!")
+        raise commands.CheckFailure("This command can only be used by the guild owner!")
 
     return commands.check(pred)
 

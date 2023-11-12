@@ -174,13 +174,13 @@ async def result_handler(ctx: commands.Context, result, argument):
         try:
             await todel.delete()
             await msg.delete()
-        except discord.HTTPException as e:
+        except discord.HTTPException:
             pass
     if msg.content.lower() in ["cancel"]:
         raise KillCommand("Canceled command.")
     try:
         num = int(msg.content)
-    except:
+    except ValueError:
         raise KillCommand(f"`{msg.content}` is not a number. Canceled command.")
     if num > len(result) or num == 0:
         raise KillCommand(f"`{num}` {'is too big' if num != 0 else 'cannot be zero'}. Canceled command.")
@@ -324,8 +324,7 @@ class User(UserConverter, discord.User):
             arg = arg[1:]
         # check for discriminator if it exists,
         if len(arg) > 5 and arg[-5] == "#":
-            discrim = arg[-4:]
-            name = arg[:-5]
+            name, _, discrim = arg.rpartition("#")
             result = search(
                 argument,
                 tuple(bot.users),
@@ -408,7 +407,7 @@ class Color(ColorConverter, discord.Color):
         arg = arg.replace(" ", "_")
         try:
             return clr.parse_hex_number(argument)
-        except:
+        except ValueError:
             pass
         method = getattr(discord.Colour, arg, None)
         if arg.startswith("from_") or method is None or not inspect.ismethod(method):
@@ -570,7 +569,7 @@ class AnyChannelBase(commands.Converter):
                 break
             try:
                 result = await converter().convert(ctx, argument)
-            except:
+            except Exception:
                 continue
         if not result:
             raise ChannelNotFound(argument)
