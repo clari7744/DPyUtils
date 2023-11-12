@@ -49,7 +49,7 @@ class Flag(commands.Flag):
     """
 
     switch: bool = False
-    description: str = None
+    description: str = MISSING
 
 
 def flag(
@@ -60,7 +60,7 @@ def flag(
     max_args: int = MISSING,
     override: bool = MISSING,
     switch: bool = False,
-    description: str = None,
+    description: str = MISSING,
     annotation: Any = MISSING,
 ) -> Any:
     """Override default functionality and parameters of the underlying :class:`FlagConverter`
@@ -218,10 +218,11 @@ class FlagConverter(
                 if not flag.required
                 else ""
             )
-            description = f"\n\t{flag.description}" if getattr(flag, "description", None) is not None else ""
+            description = f"\n\t{flag.description}" if flag.description is not MISSING else ""
 
-            sig = prefix + name + delim + annotation + default + description
-            return sig if flag.required else f"[{sig}]"
+            sig = prefix + name + delim + annotation + default
+            sig = sig if flag.required else f"[{sig}]"
+            return sig + description
 
         return "\n".join(map(format_flag, flags))
 
