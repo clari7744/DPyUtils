@@ -2,7 +2,17 @@ import asyncio
 import os
 from typing import Union
 
-import discord
+from discord import (
+    DMChannel,
+    Emoji,
+    Message,
+    PartialEmoji,
+    Permissions,
+    RawMessageDeleteEvent,
+    RawMessageUpdateEvent,
+    utils,
+)
+from discord.errors import Forbidden, HTTPException, NotFound
 from discord.ext import commands
 
 
@@ -12,19 +22,19 @@ class Context(commands.Context):
         self.msg_cache = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
 
-    async def reaction_delete(self, msg: discord.Message, del_em):
+    async def reaction_delete(self, msg: Message, del_em):
         if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):  #
             del_em = "🗑️"  # If it's only a bool, then default to trash can unicode
         if not del_em:  # It wasn't enabled
             return
-        if not isinstance(del_em, discord.Emoji):
+        if not isinstance(del_em, Emoji):
             try:
                 del_em = await self.bot.fetch_emoji(int(del_em))  # Get a custom emoji by ID if possible
-            except (discord.NotFound, discord.HTTPException):
+            except (NotFound, HTTPException):
                 del_em = str(del_em)  # It's either unicode, full custom format `<a?:name:ID>`, or trash
         try:
             await msg.add_reaction(del_em)  # Attempt to add the reaction
-        except discord.HTTPException:
+        except HTTPException:
             return  # It failed, so do nothing
         try:
             await self.bot.wait_for(
@@ -40,11 +50,11 @@ class Context(commands.Context):
         else:
             try:
                 await msg.delete()  # They *did* click the reaction, so attempt to delete the message
-            except (discord.NotFound, discord.HTTPException):
+            except (NotFound, HTTPException):
                 pass  # Weird things happen sometimes
 
     async def _send(self, content, **kwargs):
-        perms: discord.Permissions = self.channel.permissions_for(self.me)
+        perms: Permissions = self.channel.permissions_for(self.me)
 
         def error(thing):
             if not getattr(self, "interaction", None):  # slash commands do be special
@@ -64,7 +74,7 @@ class Context(commands.Context):
         if kwargs.get("reference", None):
             try:
                 return await super().send(content, **kwargs)  # whoooo all permission checks were passed
-            except discord.HTTPException as e:
+            except HTTPException as e:
                 if "message_reference" in str(e):
                     kwargs.pop("reference")
                     return await super().send(content, **kwargs)
@@ -142,24 +152,24 @@ class Context(commands.Context):
             if clear_invoke_react:
                 try:
                     await self.message.clear_reactions()
-                except (discord.Forbidden, discord.HTTPException):
+                except (Forbidden, HTTPException):
                     pass
             if clear_response_react:
                 try:
                     await self.msg_cache[mid].clear_reactions()
-                except (discord.Forbidden, discord.HTTPException):
+                except (Forbidden, HTTPException):
                     pass
 
         try:
             kwargs.pop("reference", None)
             await self.msg_cache[mid].edit(content=content, **kwargs)
-        except discord.NotFound:
+        except NotFound:
             self.msg_cache.pop(mid, None)
             return await self._do_send(content, **kwargs)
 
         try:
             msg = await self.channel.fetch_message(self.msg_cache[mid].id)
-        except (discord.NotFound, discord.HTTPException, discord.Forbidden):
+        except (NotFound, HTTPException, Forbidden):
             msg = None
         return msg, del_em, use_react
 
@@ -192,10 +202,10 @@ class ContextEditor:
         bot.add_listener(self.on_raw_message_edit, "on_raw_message_edit")
         bot.add_listener(self.on_raw_message_delete, "on_raw_message_delete")
 
-    async def get_context(self, message: discord.Message, *, cls=None):
+    async def get_context(self, message: Message, *, cls=None):
         return await self.bot_super.get_context(message, cls=cls or self.Context)
 
-    async def process_commands(self, message: discord.Message):
+    async def process_commands(self, message: Message):
         ctx = await self.bot.get_context(message, cls=self.Context)
         await self.bot.invoke(ctx)
 
@@ -205,24 +215,24 @@ class ContextEditor:
             #                await ctx.trigger_typing()
             await self.bot_super.invoke(ctx)
 
-    async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
+    async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
         # Sending a message with an attachment link triggers a message edit with content None to show the embed, this should hopefully catch that.
         if payload.data.get("content") is None:
             return
         chan = self.bot.get_channel(payload.channel_id)
         if not chan:
             return
-        me = chan.me if isinstance(chan, discord.DMChannel) else chan.guild.me
+        me = chan.me if isinstance(chan, DMChannel) else chan.guild.me
         if not chan.permissions_for(me).read_messages:
             return
         try:
             msg = await chan.fetch_message(payload.message_id)
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        except (NotFound, Forbidden, HTTPException):
             return
         if not msg.author.bot and chan.permissions_for(me).send_messages:
             await self.bot.process_commands(msg)
 
-    async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
+    async def on_raw_message_delete(self, payload: RawMessageDeleteEvent):
         await asyncio.sleep(1)
         self.bot.msg_cache.pop(payload.message_id, None)
 
@@ -230,7 +240,7 @@ class ContextEditor:
     # if i want it to be a bot function then it probably should work better than this
     # and i should fix that `self` and stuff
 
-    async def get_del_emoji(self, bot: commands.Bot, message: discord.Message):
+    async def get_del_emoji(self, bot: commands.Bot, message: Message):
         """
         |coro|
         Returns bot.msg_del_emoji by default. Overwrite this to customize per locale.
@@ -246,7 +256,7 @@ class ContextEditor:
     async def make_emoji(
         self,
         bot: commands.Bot,
-        emoji: Union[discord.Emoji, discord.PartialEmoji, int, str],
+        emoji: Union[Emoji, PartialEmoji, int, str],
         *,
         allow_partial: bool = False,
     ):
@@ -254,7 +264,7 @@ class ContextEditor:
             emoji = "🗑️"  # If it's only a bool, then default to trash can unicode
         if not emoji:  # It wasn't enabled
             return None
-        if isinstance(emoji, discord.Emoji):
+        if isinstance(emoji, Emoji):
             return emoji
         if emoji.isdigit():
             emoji = bot.get_emoji(int(emoji))  # Get a custom emoji by ID if possible
@@ -273,7 +283,7 @@ async def teardown(bot: commands.Bot):
     bot_super = super(bot.__class__, bot)
 
     def get_l(listnr: str):
-        return discord.utils.find(
+        return utils.find(
             lambda e: e.__self__.__class__.__name__ == "ContextEditor",
             bot.extra_events["on_raw_message_" + listnr],
         )

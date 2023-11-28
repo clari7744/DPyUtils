@@ -1,9 +1,9 @@
 import re
 
-import discord
+from discord import version_info as dpy_version_info
 from discord.ext import commands
 
-if not discord.version_info >= (2, 0, 0):
+if not dpy_version_info >= (2, 0, 0):
     raise TypeError("Sorry, this can only be used in v2")
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional

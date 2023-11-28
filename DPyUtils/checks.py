@@ -1,6 +1,6 @@
 import typing
 
-import discord
+from discord import Member, Role
 from discord.ext import commands
 
 
@@ -32,7 +32,7 @@ def is_guild_owner():
 
 def check_hierarchy(
     ctx: commands.Context,
-    obj: typing.Union[discord.Member, discord.Role],
+    obj: typing.Union[Member, Role],
     *,
     return_bool: bool = False,
 ):

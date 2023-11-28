@@ -2,7 +2,7 @@ import os
 import traceback
 from typing import Iterable, List, Union
 
-import discord
+from discord import DMChannel, Member, User
 from discord.ext import commands
 
 
@@ -37,7 +37,7 @@ async def load_extensions(
 
 async def try_dm(
     ctx: commands.Context,
-    member: Union[discord.User, discord.Member],
+    member: Union[User, Member],
     content=None,
     *,
     fallback_ctx: bool = False,
@@ -48,7 +48,7 @@ async def try_dm(
     try:
         return await member.send(content, **kwargs)
     except Exception:
-        if (fallback_ctx and isinstance(ctx.channel, discord.DMChannel)) or not fallback_ctx:
+        if (fallback_ctx and isinstance(ctx.channel, DMChannel)) or not fallback_ctx:
             return None
         return await ctx.send(content, **kwargs)
 

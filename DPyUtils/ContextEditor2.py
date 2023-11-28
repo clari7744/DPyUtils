@@ -1,20 +1,21 @@
 import traceback
 
-import discord
+from discord import ButtonStyle, Interaction, ui
 from discord.ext import commands
+from discord.utils import copy_doc
 
 from .ContextEditor import Context as OldContext
 from .ContextEditor import ContextEditor
 from .ContextEditor import teardown as _teardown
 
 
-class DeleteButton(discord.ui.Button):
+class DeleteButton(ui.Button):
     def __init__(self, ctx: commands.Context, *args, **kwargs):
         self.ctx = ctx
-        kwargs.update(style=discord.ButtonStyle(4), label="Delete")
+        kwargs.update(style=ButtonStyle(4), label="Delete")
         super().__init__(*args, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: Interaction):
         try:
             if (
                 interaction.user.id == self.ctx.author.id
@@ -33,7 +34,7 @@ class Context(OldContext):
     async def add_del_button(self, kwargs: dict):
         if kwargs.get("use_react", False):
             return kwargs
-        view = kwargs.get("view", discord.ui.View())
+        view = kwargs.get("view", ui.View())
         use_react = False
         #        emoji = await self.get_del_emoji(self.bot, self.message)
         if len(view.children) < 25:
@@ -43,7 +44,7 @@ class Context(OldContext):
         kwargs.update(view=view, use_react=use_react)
         return kwargs
 
-    @discord.utils.copy_doc(OldContext.send)
+    @copy_doc(OldContext.send)
     async def send(self, content: str = None, **kwargs):
         return await super().send(content, **(await self.add_del_button(kwargs)))
 
