@@ -1,4 +1,5 @@
 import traceback
+from logging import getLogger
 
 from discord import ButtonStyle, Interaction, ui
 from discord.ext import commands
@@ -7,6 +8,8 @@ from discord.utils import copy_doc
 from .ContextEditor import Context as OldContext
 from .ContextEditor import ContextEditor
 from .ContextEditor import teardown as _teardown
+
+log = getLogger(__name__)
 
 
 class DeleteButton(ui.Button):
@@ -27,7 +30,7 @@ class DeleteButton(ui.Button):
                     "You can only delete your own command responses.", ephemeral=True
                 )
         except Exception as e:
-            print(traceback.format_exception(type(e), e, e.__traceback__))
+            log.error(traceback.format_exception(type(e), e, e.__traceback__))
 
 
 class Context(OldContext):

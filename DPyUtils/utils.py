@@ -1,9 +1,12 @@
 import os
 import traceback
+from logging import getLogger
 from typing import Iterable, List, Union
 
 from discord import DMChannel, Member, User
 from discord.ext import commands
+
+log = getLogger(__name__)
 
 
 async def load_extensions(
@@ -20,19 +23,19 @@ async def load_extensions(
         for file in os.listdir(_dir):
             if file.endswith(".py") and not file.startswith("__"):
                 extensions.append(f"{_dir.replace('/', '.')}.{file[:-3]}")
-    print(f"Extensions to attempt to load: {', '.join(extensions)}")
+    log.info(f"Extensions to attempt to load: {', '.join(extensions)}")
     extensions = [e for e in extensions if e not in skip]
     maxl = max(map(len, extensions)) + 2
     for e in extensions:
         e = f"'{e}'"
         try:
             await bot.load_extension(e.strip("'"))
-            print(f"Loaded {e:{maxl}} successfully.")
+            log.info(f"Loaded {e:{maxl}} successfully.")
         except Exception as err:
-            print(f"Failed to load {e}!\nReason:\n{err}")
-            print("".join(traceback.format_exception(type(err), err, err.__traceback__)))
+            log.error(f"Failed to load {e}!\nReason:\n{err}")
+            log.error("".join(traceback.format_exception(type(err), err, err.__traceback__)))
     for e in skip:
-        print(f"Skipped '{e}'")
+        log.info(f"Skipped '{e}'")
 
 
 async def try_dm(
