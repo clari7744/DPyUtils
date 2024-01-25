@@ -602,10 +602,11 @@ class IgnoreCaseLiteral(commands.Converter):
         cls.parameters = tuple(str(param).lower() for param in parameters)
         return cls
 
-    async def convert(self, ctx: Context, argument):
-        if str(argument).lower() not in self.parameters:
+    async def convert(self, ctx: Context, argument: str):
+        lower = str(argument).lower()
+        if lower not in self.parameters:
             raise commands.BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
-        return argument
+        return lower
 
 
 class IntList(commands.Converter):

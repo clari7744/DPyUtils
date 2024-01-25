@@ -35,9 +35,9 @@ class DeleteButton(ui.Button):
 
 class Context(OldContext):
     async def add_del_button(self, kwargs: dict):
-        if kwargs.get("use_react", False):
-            return kwargs
         view = kwargs.get("view", ui.View())
+        if kwargs.get("use_react", False) or view is None:
+            return kwargs
         use_react = False
         #        emoji = await self.get_del_emoji(self.bot, self.message)
         if len(view.children) < 25:
