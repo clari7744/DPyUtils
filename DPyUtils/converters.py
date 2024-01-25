@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 import re
-from typing import Iterable, List, Literal, Type
+from typing import Iterable, List, Literal, Tuple, Type
 
 import discord
 from discord.ext import commands
@@ -598,7 +598,9 @@ class Message(MessageConverter):
 
 
 class IgnoreCaseLiteral(commands.Converter):
-    def __class_getitem__(cls, *parameters):
+    def __class_getitem__(cls, parameters: str | Tuple[str]):
+        if isinstance(parameters, str):
+            parameters = (parameters,)
         cls.parameters = tuple(str(param).lower() for param in parameters)
         return cls
 
