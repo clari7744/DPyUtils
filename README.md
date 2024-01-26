@@ -2,7 +2,9 @@
 Some extra discord.py utilities
 
 ## Installation:
-Linux / macOS / Microsoft Store:
+If you're on Windows, the command is a little different depending on how you installed Python.
+
+Linux / macOS / Microsoft Store Python:
 ```sh
 python3 -m pip install -U git+https://github.com/clari7744/DPyUtils.git
 ```
