@@ -2,7 +2,7 @@ from discord import Color, DMChannel, Embed, utils
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand, Paginator
 from discord.ext.commands.help import _HelpCommandImpl
 
-from . import FlagConverter
+from . import FlagConverter, trim
 
 
 class EmbedHelpCommand(HelpCommand):
@@ -28,12 +28,6 @@ class EmbedHelpCommand(HelpCommand):
 
     async def prepare_help_command(self, ctx: Context, command: str | None = None):
         self.paginator.max_size = 4096 - len(self.get_ending_note())
-
-    def shorten_text(self, text):
-        """:class:`str`: Shortens text to fit into the :attr:`width`."""
-        if len(text) > self.width:
-            return text[: self.width - 3].rstrip() + "..."
-        return text
 
     def get_ending_note(self):
         return f"""
@@ -94,7 +88,7 @@ Type `{self.context.clean_prefix}{self.invoked_with} <command>` to get info on t
         for cmd in cmds:
             width = self.get_max_size(cmds) - (utils._string_width(cmd.name) - len(cmd.name))
             entry = f"`{cmd.name:<{width}} |` {cmd.short_doc}"
-            self.paginator.add_line(self.shorten_text(entry))
+            self.paginator.add_line(trim(entry, self.width))
 
     async def send_help(self, embed: Embed):
         embed.description = embed.description.format(prefix=self.context.clean_prefix, help=self.context.invoked_with)
@@ -197,3 +191,7 @@ class HelpCog(Cog):
 
     def cog_unload(self):
         self.bot.help_command = self._original_help_command
+
+
+async def setup(bot: Bot):
+    HelpCog(bot)

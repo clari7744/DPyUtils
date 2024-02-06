@@ -24,7 +24,8 @@ async def load_extensions(
             if file.endswith(".py") and not file.startswith("__"):
                 extensions.append(f"{_dir.replace('/', '.')}.{file[:-3]}")
     log.info(f"Extensions to attempt to load: {', '.join(extensions)}")
-    extensions = [f"'{e}'" for e in extensions if e not in skip]
+    extensions = sorted(f"'{e}'" for e in extensions if e not in skip)
+    # sorted([f"'{e}'" for e in extensions if e not in skip], key=lambda x: x.lower().split(".")[-1])
     maxl = max(map(len, extensions))
     for e in extensions:
         try:
@@ -86,7 +87,7 @@ def trim(text: str, max_len: int):
     Trims the text to the maximum length and adds ellipsis if it's too long
     """
     if len(text) > max_len:
-        return text[: max_len - 1] + "…"
+        return text[: max_len - 1].rstrip() + "…"
     return text
 
 
