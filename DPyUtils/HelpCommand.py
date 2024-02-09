@@ -2,7 +2,8 @@ from discord import Color, DMChannel, Embed, utils
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand, Paginator
 from discord.ext.commands.help import _HelpCommandImpl
 
-from . import FlagConverter, trim
+from .flags import FlagConverter
+from .utils import trim
 
 
 class EmbedHelpCommand(HelpCommand):

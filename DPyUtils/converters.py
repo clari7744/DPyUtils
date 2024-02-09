@@ -4,6 +4,7 @@ import re
 from typing import Iterable, List, Literal, Tuple, Type
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.ext.commands.converter import (
@@ -597,18 +598,27 @@ class Message(MessageConverter):
         await cls().convert(ctx, argument.strip("<>"))
 
 
-class IgnoreCaseLiteral(commands.Converter):
+class IgnoreCaseLiteral(commands.Converter, app_commands.Transformer):
     def __class_getitem__(cls, parameters: str | Tuple[str]):
         if isinstance(parameters, str):
             parameters = (parameters,)
         cls.parameters = tuple(str(param).lower() for param in parameters)
         return cls
 
+    async def check(self, argument: str):
+        if (lower := str(argument).lower()) in self.parameters:
+            return lower
+        raise commands.BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
+
     async def convert(self, ctx: Context, argument: str):
-        lower = str(argument).lower()
-        if lower not in self.parameters:
-            raise commands.BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
-        return lower
+        return await self.check(argument)
+
+    async def transform(self, interaction: discord.Interaction[discord.Client], value):
+        return await self.check(value)
+
+    @property
+    def choices(self):
+        return [app_commands.Choice(name=param, value=param) for param in self.parameters]
 
 
 class IntList(commands.Converter):
@@ -638,7 +648,7 @@ class Permissions(commands.Converter, discord.Permissions):
         return perm
 
 
-if opts := getattr(discord.app_commands.transformers, "CHANNEL_TO_TYPES", {}):
+if opts := getattr(app_commands.transformers, "CHANNEL_TO_TYPES", {}):
     opts.update(
         {
             TextChannel: opts[discord.TextChannel],
