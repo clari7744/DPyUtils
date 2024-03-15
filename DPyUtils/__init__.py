@@ -34,6 +34,5 @@ from .duration import parse as parse_duration
 from .duration import strfdur
 from .flags import Flag, FlagConverter, FlagIsSwitch, flag, get_flag_signature
 from .HelpCommand import EmbedHelpCommand
-from .transformers import DurationTransformer, IntListTransformer
 from .utils import _and, an, load_extensions, s, trim, try_dm, yn
 from .views import Confirmation

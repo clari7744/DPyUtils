@@ -3,7 +3,8 @@ import re
 from collections import namedtuple
 from typing import Union
 
-from discord.ext import commands
+from discord.app_commands import Transformer
+from discord.ext.commands import BadArgument, Converter
 
 from .utils import _and, s
 
@@ -25,13 +26,13 @@ durations = {
 }
 
 
-class InvalidTimeFormat(commands.BadArgument):
+class InvalidTimeFormat(BadArgument):
     def __init__(self, argument):
         self.argument = argument
         super().__init__("'{}' is an invalid format for time! Format must be '1y1w1d1h1m1s'.".format(argument))
 
 
-class Duration:
+class Duration(Converter, Transformer):
     def __init__(self, original: str = "0", seconds: int = 0):
         try:
             seconds = int(seconds)
@@ -95,6 +96,10 @@ class Duration:
         for item in match:
             seconds += float(item[:-1]) * durations[item[-1]]
         return cls(argument, round(seconds))
+
+    @classmethod
+    async def transform(cls, interaction, value: str):
+        return await cls.convert(interaction, value)
 
 
 def parse(param: Union[int, Duration, datetime.timedelta]) -> ParsedDuration:

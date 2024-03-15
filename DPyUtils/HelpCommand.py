@@ -88,7 +88,7 @@ Type `{self.context.clean_prefix}{self.invoked_with} <command>` to get info on t
     def fmt_commands(self, cmds: list[Command]):
         for cmd in cmds:
             width = self.get_max_size(cmds) - (utils._string_width(cmd.name) - len(cmd.name))
-            entry = f"`{cmd.name:<{width}} |` {cmd.short_doc}"
+            entry = f"`{cmd.name:<{width}}` | {cmd.short_doc}"
             self.paginator.add_line(trim(entry, self.width))
 
     async def send_help(self, embed: Embed):

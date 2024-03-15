@@ -4,7 +4,7 @@ import re
 from typing import Iterable, List, Literal, Tuple, Type
 
 import discord
-from discord import app_commands
+from discord import Interaction, app_commands
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.ext.commands.converter import (
@@ -608,7 +608,7 @@ class IgnoreCaseLiteral(commands.Converter, app_commands.Transformer):
     async def check(self, argument: str):
         if (lower := str(argument).lower()) in self.parameters:
             return lower
-        raise commands.BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
+        raise BadArgument(f"{argument} is not a valid option!\nOptions: {', '.join(self.parameters)}")
 
     async def convert(self, ctx: Context, argument: str):
         return await self.check(argument)
@@ -621,16 +621,24 @@ class IgnoreCaseLiteral(commands.Converter, app_commands.Transformer):
         return [app_commands.Choice(name=param, value=param) for param in self.parameters]
 
 
-class IntList(commands.Converter):
-    async def convert(self, ctx: Context, argument) -> List[int]:
-        arguments: List[str] = " ".join(map(str.strip, argument.split(","))).split(" ")
-        intargs: List[int] = []
-        for i in arguments:
+class IntList(commands.Converter, app_commands.Transformer):
+    async def conversion(self, where: Context | Interaction, arg: str):
+        args = "".join(map(str.strip, arg.split(","))).split(" ")
+        intargs = []
+        for i in args:
             try:
                 intargs.append(int(i))
             except ValueError as err:
-                raise BadArgument(f"{i} is not an integer!") from err
+                raise (app_commands.TransformerError if isinstance(where, Interaction) else BadArgument)(
+                    f"{i} is not an integer!"
+                ) from err
         return intargs
+
+    async def convert(self, ctx: Context, argument) -> List[int]:
+        await self.conversion(ctx, argument)
+
+    async def transform(self, interaction: Interaction, value: str) -> List[int]:
+        await self.conversion(interaction, value)
 
 
 class Permissions(commands.Converter, discord.Permissions):
