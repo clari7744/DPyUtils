@@ -1,6 +1,6 @@
 from typing import Union
 
-from discord import Button, ButtonStyle, Interaction, Member, User, ui
+from discord import ButtonStyle, Interaction, Member, User, ui
 
 from . import Context
 
@@ -22,13 +22,13 @@ class Confirmation(ui.View):
         return interaction.user.id == self.user.id
 
     @ui.button(emoji="✅", label="Confirm", style=ButtonStyle(3))
-    async def confirm(self, interaction: Interaction, button: Button) -> None:
+    async def confirm(self, interaction: Interaction, button: ui.Button) -> None:
         await interaction.response.defer()
         self.resp = True
         self.stop()
 
     @ui.button(emoji="❌", label="Cancel", style=ButtonStyle(4))
-    async def cancel(self, interaction: Interaction, button: Button) -> None:
+    async def cancel(self, interaction: Interaction, button: ui.Button) -> None:
         await interaction.send(self.cancel_message, ephemeral=self.ephemeral)
         self.resp = False
         self.stop()
