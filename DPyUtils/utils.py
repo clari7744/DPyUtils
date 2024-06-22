@@ -16,6 +16,20 @@ async def load_extensions(
     extra_cogs: List[str] = None,
     skip: List[str] = None,
 ):
+    """
+    Load all extensions in the given directories and the extra cogs
+
+    Parameters
+    ----------
+    bot : commands.Bot
+        The bot instance to load the extensions on
+    directories : List[str] = ["cogs"]
+        The directories to search for extensions
+    extra_cogs : List[str] = None
+        Extra extensions to load
+    skip : List[str] = None
+        Extensions to skip loading
+    """
     extensions = [*(extra_cogs or [])]
     directories = [*directories]
     skip = skip or []
@@ -46,6 +60,27 @@ async def try_dm(
     fallback_ctx: bool = False,
     **kwargs,
 ):
+    """
+    Try to send a message to a member in DMs, if it fails, send the message in the channel
+
+    Parameters
+    ----------
+    ctx : commands.Context
+        The context to use as a fallback
+    member : Union[User, Member]
+        The member to send the message to
+    content : str = None
+        The content of the message
+    fallback_ctx : bool = False
+        Whether to send the message in the channel if the DMs fail
+    **kwargs
+        Other keyword arguments to pass to `send`
+
+    Returns
+    -------
+    Optional[discord.Message]
+        The message that was sent
+    """
     if member.bot:
         return None if not fallback_ctx else await ctx.send(content, **kwargs)
     try:

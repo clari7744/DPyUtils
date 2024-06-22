@@ -9,9 +9,8 @@ def is_guild_owner():
     Decorator to ensure that the command invoker is the guild owner.
     Only works in a guild, so implements :func:`@commands.guild_only` internally.
 
-    Example
-    ---------
-
+    Examples
+    --------
     .. code-block:: python3
 
         @bot.command()
@@ -49,8 +48,8 @@ def check_hierarchy(
     return_bool: :class:`bool`
         Whether to return a boolean or raise an error. Defaults to False (raise an error).
 
-    Example
-    ---------
+    Examples
+    --------
     .. code-block:: python3
 
         @bot.command()

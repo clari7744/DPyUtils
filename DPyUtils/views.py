@@ -6,6 +6,31 @@ from . import Context
 
 
 class Confirmation(ui.View):
+    """
+    An easy drop-in confirmation dialog for your commands.
+
+    Parameters
+    ----------
+    ctx : Union[Context, Interaction]
+        The context or interaction to get the user from
+    cancel_message : str = "Cancelled"
+        The message to send when the user cancels
+    ephemeral : bool = False
+        Whether to send the cancel message in an ephemeral message
+
+    Examples
+    --------
+
+    .. code-block:: python3
+
+    async def confirm(ctx):
+        confirm = Confirmation(ctx)
+        await ctx.send("Are you sure?", view=confirm)
+        if await confirm.run():
+            await ctx.send("Do the thing here")
+
+    """
+
     def __init__(self, ctx: Union[Context, Interaction], *args, cancel_message="Cancelled", ephemeral=False, **kwargs):
         self.user: Union[Member, User] = ctx.user if isinstance(ctx, Interaction) else ctx.author
         self.resp: bool = False

@@ -7,6 +7,10 @@ from .utils import trim
 
 
 class EmbedHelpCommand(HelpCommand):
+    """
+    A custom help command that uses embeds.
+    """
+
     def __init__(self, **options):
         options["command_attrs"] = dict(
             **options.get("command_attrs", {}),
@@ -183,6 +187,10 @@ Type `{self.context.clean_prefix}{self.invoked_with} <command>` to get info on t
 
 
 class HelpCog(Cog):
+    """
+    A cog to load the custom help command.
+    """
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self._original_help_command = bot.help_command

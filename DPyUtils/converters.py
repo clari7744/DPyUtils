@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 import re
-from typing import Iterable, List, Literal, Tuple, Type
+from typing import Iterable, List, Literal, Tuple, Type, TypeVar
 
 import discord
 from discord import Interaction, app_commands
@@ -49,7 +49,7 @@ Context = commands.Context[Bot]
 class UserNotType(BadArgument):
     def __init__(
         self,
-        argument,
+        argument: str,
         _type: Literal["bot", "human"],
         _class: Literal["Member", "User"],
     ):
@@ -75,13 +75,40 @@ def _m_or_u(iterable):
     return "???"
 
 
+SearchObjT = TypeVar(
+    "SearchObjT",
+    discord.Member,
+    discord.User,
+    discord.Role,
+    discord.TextChannel,
+    discord.VoiceChannel,
+    discord.StageChannel,
+    discord.CategoryChannel,
+    discord.Thread,
+)
+
+
 def search(
-    argument,
-    iterable,
+    argument: str,
+    iterable: list[SearchObjT],
     *attrs: str,
     mem_type: Literal["EITHER", "BOT", "HUMAN"] = "EITHER",
     **kwargs,
-):
+) -> SearchObjT:
+    """
+    Search for an object in an iterable based on the argument and attributes.
+
+    Parameters
+    ----------
+    argument : str
+        The search term
+    iterable : list
+        The list of objects to search through
+    attrs : str
+        The attributes to check on each object
+    mem_type : str
+        The type of member to search for
+    """
     discrim = kwargs.pop("discriminator", kwargs.pop("discrim", None))
     extra_checks = kwargs.pop("extra_checks", [])
     iterable = tuple(iterable)
@@ -110,7 +137,7 @@ def search(
                     result = [x for x in result if not x.bot]
             else:
                 raise ArgumentParsingError(
-                    "Oh no! Something's gone wrong with the converter! Please DM 💜Clari#7744 (642416218967375882) the context of what caused this to break."
+                    "Oh no! Something's gone wrong with the converter! Please DM clari7744 (642416218967375882) with the context of what caused this to break."
                 )
 
     if isinstance(iterable[0], (discord.Member, discord.User, discord.ClientUser)):
@@ -133,7 +160,10 @@ async def on_command_error(ctx: Context, error):
         await ctx.bot.converters_original_on_command_error(ctx, error)
 
 
-async def result_handler(ctx: Context, result, argument):
+async def result_handler(ctx: Context, result, argument: str):
+    """
+    Handles the result of a search, allowing for the user to select from multiple results.
+    """
     if not hasattr(ctx.bot, "converters_original_on_command_error"):
         ctx.bot.converters_original_on_command_error = ctx.bot.on_command_error
         ctx.bot.on_command_error = on_command_error
@@ -143,7 +173,7 @@ async def result_handler(ctx: Context, result, argument):
         return result[0]
     if len(result) < 1:
         raise BadArgument(
-            "Your argument was invalid and somehow made it all the way to the multiple-result handler, please DM 💜Clari#7744 (642416218967375882) and provide the context that caused this to happen."
+            "Your argument was invalid and somehow made it all the way to the multiple-result handler, please DM clari7744 (642416218967375882) and provide the context that caused this to happen."
         )
     if len(result) > 20:
         raise KillCommand(
@@ -163,6 +193,7 @@ async def result_handler(ctx: Context, result, argument):
     )
     msg: discord.Message = None
     try:
+        # TODO: use a select menu instead of wait_for(message)
         msg = await ctx.bot.wait_for(
             "message",
             timeout=20,
@@ -191,11 +222,16 @@ async def result_handler(ctx: Context, result, argument):
 
 
 async def check_bot(
-    argument,
-    result,
-    error,
+    argument: str,
+    result: discord.Member | discord.User,
+    error: str,
     mem_type: Literal["EITHER", "MEMBER", "BOT"] = "EITHER",
 ):
+    """
+    Asserts that the given result is of the correct type.
+    """
+    if not isinstance(result, (discord.Member, discord.User)):
+        raise BadArgument("")
     if mem_type == "EITHER":
         return result
     if mem_type == "BOT":
@@ -599,6 +635,10 @@ class Message(MessageConverter):
 
 
 class IgnoreCaseLiteral(commands.Converter, app_commands.Transformer):
+    """
+    A converter to ensure that the argument is one of the specified literals, ignoring case.
+    """
+
     def __class_getitem__(cls, parameters: str | Tuple[str]):
         if isinstance(parameters, str):
             parameters = (parameters,)
@@ -622,7 +662,21 @@ class IgnoreCaseLiteral(commands.Converter, app_commands.Transformer):
 
 
 class IntList(commands.Converter, app_commands.Transformer):
+    """
+    A converter to convert a comma-separated string of integers to a list of integers.
+    """
+
     async def conversion(self, where: Context | Interaction, arg: str):
+        """
+        The conversion function for the converter.
+
+        Parameters
+        ----------
+        where : Union[Context, Interaction]
+            The context or interaction where the conversion is taking place.
+        arg : str
+            The string to convert - example: "1, 2, 3, 4"
+        """
         args = "".join(map(str.strip, arg.split(","))).split(" ")
         intargs = []
         for i in args:
@@ -642,6 +696,10 @@ class IntList(commands.Converter, app_commands.Transformer):
 
 
 class Permissions(commands.Converter, discord.Permissions):
+    """
+    A converter to convert a string of permissions to a discord.Permissions object.
+    """
+
     @classmethod
     async def convert(cls, ctx: Context, argument) -> discord.Permissions:
         if argument.isdigit() and int(argument) < discord.Permissions.all().value:

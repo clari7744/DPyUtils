@@ -4,7 +4,7 @@ from collections import namedtuple
 from typing import Union
 
 from discord.app_commands import Transformer
-from discord.ext.commands import BadArgument, Converter
+from discord.ext.commands import BadArgument, Context, Converter
 
 from .utils import _and, s
 
@@ -33,6 +33,13 @@ class InvalidTimeFormat(BadArgument):
 
 
 class Duration(Converter, Transformer):
+    """
+    A converter to convert a string to a Duration object.
+    The string must be in the format of '1y1w1d1h1m1s' where the numbers are the amount of years, weeks, days, hours, minutes and seconds respectively.
+    The letters are the short forms of the time units.
+    The order of the time units does not matter.
+    """
+
     def __init__(self, original: str = "0", seconds: int = 0):
         try:
             seconds = int(seconds)
@@ -82,9 +89,16 @@ class Duration(Converter, Transformer):
         """
         return self._seconds
 
-    # TODO: Create a docstring for this class
     @classmethod
-    async def convert(cls, ctx, argument):
+    async def convert(cls, ctx: Context, argument: str):
+        """
+        Converts the argument to a Duration object.
+
+        Parameters
+        ----------
+        ctx: Context | None
+            The context of the command (unused)
+        """
         try:
             return cls(argument, int(argument))
         except ValueError:
@@ -96,6 +110,8 @@ class Duration(Converter, Transformer):
         for item in match:
             seconds += float(item[:-1]) * durations[item[-1]]
         return cls(argument, round(seconds))
+
+    # TODO: implement humanize in this
 
     @classmethod
     async def transform(cls, interaction, value: str):
@@ -129,6 +145,19 @@ def strfdur(
     compact: bool = False,
     letter: bool = False,
 ) -> str:
+    """
+    This function takes an int or timedelta parameter of seconds and formats it into a human readable string.
+    Default format is '1 year, 1 week, 3 days, 1 hour, 1 minute, 1 second'.
+
+    Parameters
+    ----------
+    param: int | Duration | ParsedDuration | datetime.timedelta
+        The duration to format.
+    compact: bool
+        Change the format to 0:00:00:00 (d:hh:mm:ss) if True. Cannot be used with times greater than 7 days.
+    letter: bool
+        Use the first letter of the time unit instead of the full word.
+    """
     dur: ParsedDuration = parse(param) if not isinstance(param, ParsedDuration) else param
     dict_times = {incr: getattr(dur, incr + "s") for incr in ["year", "week", "day", "hour", "minute", "second"]}
     times = [(k, int(v)) for k, v in dict_times.items() if v or (k not in ("year", "week") and compact)] or [

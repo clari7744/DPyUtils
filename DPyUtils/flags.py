@@ -204,6 +204,9 @@ class FlagConverter(
 
     @classmethod
     def get_flag_signature(cls) -> str:
+        """
+        Returns a string containing the signature of the flags.
+        """
         flags = list(cls.get_flags().values())
         prefix = cls.__commands_flag_prefix__
         delim = cls.__commands_flag_delimiter__
@@ -214,9 +217,7 @@ class FlagConverter(
             default = (
                 f'="{flag.default}"'
                 if isinstance(flag.default, str)
-                else f"={flag.default}"
-                if not flag.required
-                else ""
+                else f"={flag.default}" if not flag.required else ""
             )
             description = f"\n\t{flag.description}" if flag.description is not MISSING else ""
 

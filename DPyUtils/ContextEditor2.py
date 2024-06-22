@@ -13,6 +13,15 @@ log = getLogger(__name__)
 
 
 class DeleteButton(ui.Button):
+    """
+    A button that deletes the message it is attached to.
+
+    Parameters
+    ----------
+    ctx : commands.Context
+        The context of the command that created the message.
+    """
+
     def __init__(self, ctx: commands.Context, *args, **kwargs):
         self.ctx = ctx
         kwargs.update(style=ButtonStyle(4), label="Delete")
@@ -34,14 +43,25 @@ class DeleteButton(ui.Button):
 
 
 class Context(OldContext):
+    """
+    A subclass of `commands.Context` that adds a delete button to the message.
+    """
+
     async def add_del_button(self, kwargs: dict):
+        """
+        A hook that adds a delete button to the message as long as the message has less than 25 buttons.
+        """
         view = kwargs.get("view", ui.View())
         if kwargs.get("use_react", False) or view is None:
             return kwargs
         use_react = False
         #        emoji = await self.get_del_emoji(self.bot, self.message)
         if len(view.children) < 25:
-            view.add_item(DeleteButton(self))  # , emoji=emoji))
+            try:
+                view.add_item(DeleteButton(self))  # , emoji=emoji))
+            except Exception as e:
+                log.error(traceback.format_exception(type(e), e, e.__traceback__))
+                use_react = True
         else:
             use_react = True
         kwargs.update(view=view, use_react=use_react)

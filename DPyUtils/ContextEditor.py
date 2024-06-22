@@ -22,7 +22,19 @@ class Context(commands.Context):
         self.msg_cache = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
 
-    async def reaction_delete(self, msg: Message, del_em):
+    async def reaction_delete(self, msg: Message, del_em: bool | str | int | Emoji | None):
+        """
+        Handles message-delete reactions.
+        Adds the reaction to the message, waits for the author or a user with manage_messages to click the reaction, and then deletes the message.
+        If the reaction isn't clicked, remove it.
+
+        Parameters
+        ----------
+        msg :class:`Message`
+            The message to add the reaction to.
+        del_em : Union[:class:`bool`, :class:`int`, :class:`str`, :class:`Emoji`, None]
+            The emoji to use for the delete reaction.
+        """
         if str(del_em).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):  #
             del_em = "🗑️"  # If it's only a bool, then default to trash can unicode
         if not del_em:  # It wasn't enabled
@@ -53,7 +65,15 @@ class Context(commands.Context):
             except (NotFound, HTTPException):
                 pass  # Weird things happen sometimes
 
-    async def _send(self, content, **kwargs):
+    async def _send(self, content: str, **kwargs):
+        """
+        Sends a message with the given content and keyword arguments.
+
+        Parameters
+        ----------
+        content :class:`str`
+            The content of the message to send.
+        """
         perms: Permissions = self.channel.permissions_for(self.me)
 
         def error(thing):
@@ -178,20 +198,30 @@ class Context(commands.Context):
 
 
 class ContextEditor:
-    def __init__(self, bot: commands.Bot, context: Context, **kwargs):
+    def __init__(self, bot: commands.Bot, context: Context, del_em: str = None, msg_cache_size: int = 500):
         # TODO Format this better later
         """
-        Options:
-        `del_em` The emoji used for bot.msg_del_emoji
-        msg_cache_size :class:`int` The maximum size allowed for the cache before it starts removing messages.
+        A psuedo-cog that enables triggering commands on message edit, as well as adding a reaction to allow the triggering user to delete the response.
+
+        Parameters
+        ----------
+        bot :class:`commands.Bot`
+            Your bot instance
+        context :class:`Context`
+            The context class to use for the bot
+        **kwargs
+            del_em :class:`str`
+                The emoji used for bot.msg_del_emoji
+            msg_cache_size :class:`int`
+                The maximum size allowed for the cache before it starts removing messages.
         """
         self.Context = context
         self.bot = bot
         self.bot_super = super(bot.__class__, self.bot)
 
         bot.msg_cache = {}
-        bot.msg_cache_size = kwargs.pop("msg_cache_size", 500)
-        bot.msg_del_emoji = kwargs.pop("del_em", os.getenv("CTX_DELETE_EMOJI", None))
+        bot.msg_cache_size = msg_cache_size
+        bot.msg_del_emoji = del_em or os.getenv("CTX_DELETE_EMOJI") or None
         bot.get_del_emoji = self.get_del_emoji
         bot.make_emoji = self.make_emoji
 
@@ -216,6 +246,14 @@ class ContextEditor:
             await self.bot_super.invoke(ctx)
 
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
+        """
+        Handles message edits by processing commands on the edited message.
+
+        Parameters
+        ----------
+        payload :class:`RawMessageUpdateEvent`
+            The payload from the message edit event.
+        """
         # Sending a message with an attachment link triggers a message edit with content None to show the embed, this should hopefully catch that.
         if payload.data.get("content") is None:
             return
@@ -233,6 +271,14 @@ class ContextEditor:
             await self.bot.process_commands(msg)
 
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent):
+        """
+        Handles message deletes by removing the message from the cache.
+
+        Parameters
+        ----------
+        payload :class:`RawMessageDeleteEvent`
+            The payload from the message delete event.
+        """
         await asyncio.sleep(1)
         self.bot.msg_cache.pop(payload.message_id, None)
 
@@ -242,7 +288,6 @@ class ContextEditor:
 
     async def get_del_emoji(self, bot: commands.Bot, message: Message):
         """
-        |coro|
         Returns bot.msg_del_emoji by default. Overwrite this to customize per locale.
         Parameters
         ----------
@@ -260,6 +305,23 @@ class ContextEditor:
         *,
         allow_partial: bool = False,
     ):
+        """
+        Converts a string or integer to an emoji object if possible.
+
+        Parameters
+        ----------
+        bot :class:`Bot`
+            Your bot instance
+        emoji : Union[:class:`Emoji`, :class:`PartialEmoji`, :class:`int`, :class:`str`]
+            The emoji to convert.
+        allow_partial :class:`bool`
+            Whether to allow partial emoji objects to be returned. Defaults to False.
+
+        Returns
+        -------
+        Union[:class:`Emoji`, :class:`PartialEmoji`, :class:`str`, :class:`int`]
+            The emoji object if possible, otherwise the original input.
+        """
         if str(emoji).lower() in ("true", "t", "1", "enabled", "on", "yes", "y"):
             emoji = "🗑️"  # If it's only a bool, then default to trash can unicode
         if not emoji:  # It wasn't enabled
