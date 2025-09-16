@@ -51,18 +51,21 @@ class Context(OldContext):
         """
         A hook that adds a delete button to the message as long as the message has less than 25 buttons.
         """
-        view = kwargs.get("view", ui.View())
+        view: ui.View | ui.LayoutView = kwargs.get("view", ui.View())
         if kwargs.get("use_react", False) or view is None:
             return kwargs
         use_react = False
         #        emoji = await self.get_del_emoji(self.bot, self.message)
-        if len(view.children) < 25:
-            try:
+        try:
+            if isinstance(view, ui.View) and len(view.children) < 25:
                 view.add_item(DeleteButton(self))  # , emoji=emoji))
-            except Exception as e:
-                log.error(traceback.format_exception(type(e), e, e.__traceback__))
+            elif isinstance(view, ui.LayoutView):
+                if len([c for c in view.walk_children()]) < 40:
+                    view.add_item(ui.ActionRow(DeleteButton(self)))  # , emoji=emoji))
+            else:
                 use_react = True
-        else:
+        except Exception as e:
+            log.error(traceback.format_exception(type(e), e, e.__traceback__))
             use_react = True
         kwargs.update(view=view, use_react=use_react)
         return kwargs
