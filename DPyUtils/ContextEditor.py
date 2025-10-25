@@ -267,7 +267,13 @@ class ContextEditor:
             msg = await chan.fetch_message(payload.message_id)
         except (NotFound, Forbidden, HTTPException):
             return
-        if not msg.author.bot and chan.permissions_for(me).send_messages:
+        # if it was edited, and less than 3 seconds ago
+        if (
+            msg.edited_at is not None
+            and (utils.utcnow() - msg.edited_at).total_seconds() < 3
+            and not msg.author.bot
+            and chan.permissions_for(me).send_messages
+        ):
             await self.bot.process_commands(msg)
 
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent):
