@@ -10,6 +10,7 @@ from discord import (
     Permissions,
     RawMessageDeleteEvent,
     RawMessageUpdateEvent,
+    ui,
 )
 from discord.errors import Forbidden, HTTPException, NotFound
 from discord.ext import commands
@@ -164,7 +165,11 @@ class Context(commands.Context):
                 self.bot.msg_cache = dict(list(self.msg_cache.items())[1:])  # Janky way of capping the dict=
             return msg, del_em, use_react
 
-        if no_edit:
+        if (
+            no_edit
+            or self.msg_cache[mid].flags.components_v2
+            and not isinstance(kwargs.get("view", None), ui.LayoutView)
+        ):
             self.msg_cache.pop(mid, None)
             return await self._do_send(content, **kwargs)
 
