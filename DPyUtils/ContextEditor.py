@@ -10,16 +10,16 @@ from discord import (
     Permissions,
     RawMessageDeleteEvent,
     RawMessageUpdateEvent,
-    utils,
 )
 from discord.errors import Forbidden, HTTPException, NotFound
 from discord.ext import commands
+from discord.utils import MISSING, find, utcnow
 
 
 class Context(commands.Context):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.msg_cache = self.bot.msg_cache
+        self.msg_cache: dict[int, Message] = self.bot.msg_cache
         self.msg_cache_size = self.bot.msg_cache_size
 
     async def reaction_delete(self, msg: Message, del_em: bool | str | int | Emoji | None):
@@ -102,7 +102,7 @@ class Context(commands.Context):
                     raise e
         return await super().send(content, **kwargs)
 
-    async def send(self, content: str = None, **kwargs):
+    async def send(self, content: str = MISSING, **kwargs):
         """
 
         Inherits from commands.Context.send. See the documentation for that function for normal arguments.
@@ -140,7 +140,7 @@ class Context(commands.Context):
         self.bot.loop.create_task(self.reaction_delete(msg, del_em))
         return msg
 
-    async def _do_send(self, content: str = None, **kwargs):
+    async def _do_send(self, content: str = MISSING, **kwargs):
         no_save, no_edit = [kwargs.pop(k, False) for k in ("no_save", "no_edit")]
         clear_invoke_react = kwargs.pop("clear_invoke_react", True)
         clear_response_react = kwargs.pop("clear_response_react", True)
@@ -193,7 +193,7 @@ class Context(commands.Context):
             msg = None
         return msg, del_em, use_react
 
-    async def reply(self, content: str = None, **kwargs):
+    async def reply(self, content: str = MISSING, **kwargs):
         return await self.send(content, reference=self.message, **kwargs)
 
 
@@ -270,7 +270,7 @@ class ContextEditor:
         # if it was edited, and less than 3 seconds ago
         if (
             msg.edited_at is not None
-            and (utils.utcnow() - msg.edited_at).total_seconds() < 3
+            and (utcnow() - msg.edited_at).total_seconds() < 3
             and not msg.author.bot
             and chan.permissions_for(me).send_messages
         ):
@@ -351,7 +351,7 @@ async def teardown(bot: commands.Bot):
     bot_super = super(bot.__class__, bot)
 
     def get_l(listnr: str):
-        return utils.find(
+        return find(
             lambda e: e.__self__.__class__.__name__ == "ContextEditor",
             bot.extra_events["on_raw_message_" + listnr],
         )

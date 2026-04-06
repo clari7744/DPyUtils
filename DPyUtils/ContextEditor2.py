@@ -3,7 +3,7 @@ from logging import getLogger
 
 from discord import ButtonStyle, Interaction, ui
 from discord.ext import commands
-from discord.utils import copy_doc
+from discord.utils import MISSING, copy_doc
 
 from .ContextEditor import Context as OldContext
 from .ContextEditor import ContextEditor
@@ -71,7 +71,7 @@ class Context(OldContext):
         return kwargs
 
     @copy_doc(OldContext.send)
-    async def send(self, content: str = None, **kwargs):
+    async def send(self, content: str = MISSING, **kwargs):
         return await super().send(content, **(await self.add_del_button(kwargs)))
 
 
